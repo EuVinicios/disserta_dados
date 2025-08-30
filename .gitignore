@@ -1,0 +1,12 @@
+# Ignorar dados brutos
+*.sas7bdat
+*.csv 
+
+# Adicionar exceção para a pasta de dados do app
+!app_data/
+!app_data/*.csv
+
+# Ignorar arquivos de ambiente Python
+.venv/
+__pycache__/
+*.pyc
