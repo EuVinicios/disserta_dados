@@ -1,12 +1,18 @@
-# Ignorar dados brutos
-*.sas7bdat
-*.csv 
-
-# Adicionar exceção para a pasta de dados do app
-!app_data/
-!app_data/*.csv
-
-# Ignorar arquivos de ambiente Python
+# Ambiente Virtual Python
+# Impede o envio de megabytes de arquivos de bibliotecas
 .venv/
+
+# Cache e arquivos compilados do Python
 __pycache__/
 *.pyc
+
+# Arquivos de Dados Brutos e Confidenciais
+# Garante que NENHUM arquivo de dados SAS seja enviado, por segurança.
+*.sas7bdat
+
+# Arquivo de dados sintéticos (é gerado pelo script, não precisa estar no repo)
+dados_sinteticos.csv
+
+# Arquivos temporários do sistema operacional (Boa prática)
+.DS_Store
+Thumbs.db
