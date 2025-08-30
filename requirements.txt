@@ -13,7 +13,7 @@ ipython_pygments_lexers
 jedi
 jupyter_client
 jupyter_core
-kiwisolve
+kiwisolver
 matplotlib
 matplotlib-inline
 nest-asyncio
