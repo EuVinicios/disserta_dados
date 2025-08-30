@@ -1,0 +1,226 @@
+[OK] Matriz de correlação salva em: ./resultados_python/matriz_correlacao.png
+
+[POOLED]
+                          PooledOLS Estimation Summary                          
+================================================================================
+Dep. Variable:             ln_diver_w   R-squared:                        0.7332
+Estimator:                  PooledOLS   R-squared (Between):              0.7750
+No. Observations:             4791216   R-squared (Within):           -2.871e-05
+Date:                Sat, Aug 30 2025   R-squared (Overall):              0.7332
+Time:                        09:47:00   Log-likelihood                 -9.39e+06
+Cov. Estimator:                Robust                                           
+                                        F-statistic:                   3.292e+06
+Entities:                       99817   P-value                           0.0000
+Avg Obs:                       48.000   Distribution:               F(4,4791212)
+Min Obs:                       48.000                                           
+Max Obs:                       48.000   F-statistic (robust):          3.314e+06
+                                        P-value                           0.0000
+Time periods:                      48   Distribution:               F(4,4791212)
+Avg Obs:                    9.982e+04                                           
+Min Obs:                    9.982e+04                                           
+Max Obs:                    9.982e+04                                           
+                                                                                
+                             Parameter Estimates                              
+==============================================================================
+            Parameter  Std. Err.     T-stat    P-value    Lower CI    Upper CI
+------------------------------------------------------------------------------
+ln_renda_w    -0.2638     0.0007    -378.91     0.0000     -0.2652     -0.2625
+ln_IDH_w       1.2359     0.0133     93.175     0.0000      1.2099      1.2619
+sexo_dummy     0.3167     0.0016     198.83     0.0000      0.3136      0.3198
+idade_int     -0.0080  6.179e-05    -129.91     0.0000     -0.0081     -0.0079
+==============================================================================
+
+[FE]
+                          PanelOLS Estimation Summary                           
+================================================================================
+Dep. Variable:             ln_diver_w   R-squared:                     7.139e-06
+Estimator:                   PanelOLS   R-squared (Between):             -1.7766
+No. Observations:             4791216   R-squared (Within):            7.139e-06
+Date:                Sat, Aug 30 2025   R-squared (Overall):             -1.6807
+Time:                        09:47:03   Log-likelihood                 -5.56e+06
+Cov. Estimator:             Clustered                                           
+                                        F-statistic:                      8.3735
+Entities:                       99817   P-value                           0.0000
+Avg Obs:                       48.000   Distribution:               F(4,4691395)
+Min Obs:                       48.000                                           
+Max Obs:                       48.000   F-statistic (robust):             0.4628
+                                        P-value                           0.7631
+Time periods:                      48   Distribution:               F(4,4691395)
+Avg Obs:                    9.982e+04                                           
+Min Obs:                    9.982e+04                                           
+Max Obs:                    9.982e+04                                           
+                                                                                
+                             Parameter Estimates                              
+==============================================================================
+            Parameter  Std. Err.     T-stat    P-value    Lower CI    Upper CI
+------------------------------------------------------------------------------
+ln_renda_w     0.2630     0.3622     0.7261     0.4678     -0.4469      0.9728
+ln_IDH_w      -0.9549     1.3269    -0.7197     0.4717     -3.5555      1.6457
+sexo_dummy    -0.2658     0.2347    -1.1325     0.2574     -0.7258      0.1942
+idade_int      0.0009     0.0119     0.0798     0.9364     -0.0223      0.0242
+==============================================================================
+
+F-test for Poolability: 185.29
+P-value: 0.0000
+Distribution: F(99816,4691395)
+
+Included effects: Entity
+
+[RE]
+                        RandomEffects Estimation Summary                        
+================================================================================
+Dep. Variable:             ln_diver_w   R-squared:                        0.0669
+Estimator:              RandomEffects   R-squared (Between):              0.7750
+No. Observations:             4791216   R-squared (Within):           -2.497e-05
+Date:                Sat, Aug 30 2025   R-squared (Overall):              0.7332
+Time:                        09:47:07   Log-likelihood                 -5.61e+06
+Cov. Estimator:             Clustered                                           
+                                        F-statistic:                   8.592e+04
+Entities:                       99817   P-value                           0.0000
+Avg Obs:                       48.000   Distribution:               F(4,4791212)
+Min Obs:                       48.000                                           
+Max Obs:                       48.000   F-statistic (robust):          8.633e+04
+                                        P-value                           0.0000
+Time periods:                      48   Distribution:               F(4,4791212)
+Avg Obs:                    9.982e+04                                           
+Min Obs:                    9.982e+04                                           
+Max Obs:                    9.982e+04                                           
+                                                                                
+                             Parameter Estimates                              
+==============================================================================
+            Parameter  Std. Err.     T-stat    P-value    Lower CI    Upper CI
+------------------------------------------------------------------------------
+ln_renda_w    -0.2674     0.0070    -38.303     0.0000     -0.2811     -0.2538
+ln_IDH_w       1.0908     0.1599     6.8206     0.0000      0.7773      1.4042
+sexo_dummy     0.2962     0.0131     22.531     0.0000      0.2705      0.3220
+idade_int     -0.0081     0.0004    -20.705     0.0000     -0.0088     -0.0073
+==============================================================================
+
+[HAUSMAN] chi2(4)=8.93, p=0.0628
+
+[H1/H1a]
+                          PanelOLS Estimation Summary                           
+================================================================================
+Dep. Variable:             ln_diver_w   R-squared:                        0.5593
+Estimator:                   PanelOLS   R-squared (Between):              0.7079
+No. Observations:             4791216   R-squared (Within):               0.5593
+Date:                Sat, Aug 30 2025   R-squared (Overall):              0.6782
+Time:                        09:47:13   Log-likelihood                -3.597e+06
+Cov. Estimator:             Clustered                                           
+                                        F-statistic:                   7.443e+05
+Entities:                       99817   P-value                           0.0000
+Avg Obs:                       48.000   Distribution:               F(8,4691391)
+Min Obs:                       48.000                                           
+Max Obs:                       48.000   F-statistic (robust):          1.735e+04
+                                        P-value                           0.0000
+Time periods:                      48   Distribution:               F(8,4691391)
+Avg Obs:                    9.982e+04                                           
+Min Obs:                    9.982e+04                                           
+Max Obs:                    9.982e+04                                           
+                                                                                
+                                  Parameter Estimates                                  
+=======================================================================================
+                     Parameter  Std. Err.     T-stat    P-value    Lower CI    Upper CI
+---------------------------------------------------------------------------------------
+complex                 2.5962     0.0070     372.40     0.0000      2.5825      2.6099
+ln_ESC_w                10.671     4.3039     2.4795     0.0132      2.2359      19.107
+ln_renda_w             -3.5538     1.2263    -2.8979     0.0038     -5.9573     -1.1502
+regiao_norte           -0.2916     0.1149    -2.5386     0.0111     -0.5167     -0.0665
+regiao_nordeste         0.1173     0.1648     0.7118     0.4766     -0.2057      0.4403
+regiao_sul             -0.2775     0.0847    -3.2756     0.0011     -0.4435     -0.1114
+regiao_centro_oeste    -0.0458     0.0327    -1.4011     0.1612     -0.1098      0.0183
+sexo_dummy             -0.0287     0.1200    -0.2391     0.8111     -0.2640      0.2066
+idade_int               0.0011     0.0073     0.1504     0.8804     -0.0132      0.0153
+=======================================================================================
+
+F-test for Poolability: 118.12
+P-value: 0.0000
+Distribution: F(99816,4691391)
+
+Included effects: Entity
+
+[H2]
+                          PanelOLS Estimation Summary                           
+================================================================================
+Dep. Variable:             ln_diver_w   R-squared:                        0.0191
+Estimator:                   PanelOLS   R-squared (Between):             -0.0333
+No. Observations:             4791216   R-squared (Within):               0.0191
+Date:                Sat, Aug 30 2025   R-squared (Overall):             -0.0229
+Time:                        09:47:18   Log-likelihood                -5.514e+06
+Cov. Estimator:             Clustered                                           
+                                        F-statistic:                   1.144e+04
+Entities:                       99817   P-value                           0.0000
+Avg Obs:                       48.000   Distribution:               F(8,4691391)
+Min Obs:                       48.000                                           
+Max Obs:                       48.000   F-statistic (robust):             1888.4
+                                        P-value                           0.0000
+Time periods:                      48   Distribution:               F(8,4691391)
+Avg Obs:                    9.982e+04                                           
+Min Obs:                    9.982e+04                                           
+Max Obs:                    9.982e+04                                           
+                                                                                
+                                  Parameter Estimates                                  
+=======================================================================================
+                     Parameter  Std. Err.     T-stat    P-value    Lower CI    Upper CI
+---------------------------------------------------------------------------------------
+skew_proxy              0.0215     0.0002     122.72     0.0000      0.0212      0.0219
+ln_ESC_w                10.311     5.8103     1.7747     0.0760     -1.0766      21.699
+ln_renda_w             -3.2492     1.6644    -1.9522     0.0509     -6.5114      0.0130
+regiao_norte           -0.1487     0.1614    -0.9215     0.3568     -0.4651      0.1676
+regiao_nordeste         0.0782     0.2210     0.3538     0.7235     -0.3550      0.5114
+regiao_sul             -0.3397     0.1128    -3.0127     0.0026     -0.5607     -0.1187
+regiao_centro_oeste    -0.1417     0.0452    -3.1335     0.0017     -0.2303     -0.0531
+sexo_dummy             -0.2970     0.2333    -1.2731     0.2030     -0.7542      0.1602
+idade_int               0.0025     0.0121     0.2094     0.8341     -0.0211      0.0262
+=======================================================================================
+
+F-test for Poolability: 188.77
+P-value: 0.0000
+Distribution: F(99816,4691391)
+
+Included effects: Entity
+
+[H3]
+                          PanelOLS Estimation Summary                           
+================================================================================
+Dep. Variable:             ln_diver_w   R-squared:                     7.628e-05
+Estimator:                   PanelOLS   R-squared (Between):             -0.0143
+No. Observations:             3136320   R-squared (Within):            7.628e-05
+Date:                Sat, Aug 30 2025   R-squared (Overall):             -0.0112
+Time:                        09:47:23   Log-likelihood                -3.598e+06
+Cov. Estimator:             Clustered                                           
+                                        F-statistic:                      33.325
+Entities:                       78312   P-value                           0.0000
+Avg Obs:                       40.049   Distribution:               F(7,3058001)
+Min Obs:                       12.000                                           
+Max Obs:                       48.000   F-statistic (robust):             4.0532
+                                        P-value                           0.0002
+Time periods:                      48   Distribution:               F(7,3058001)
+Avg Obs:                    6.534e+04                                           
+Min Obs:                    4.815e+04                                           
+Max Obs:                    7.388e+04                                           
+                                                                                
+                                  Parameter Estimates                                  
+=======================================================================================
+                     Parameter  Std. Err.     T-stat    P-value    Lower CI    Upper CI
+---------------------------------------------------------------------------------------
+ln_IDH_w               -10.712     18.359    -0.5834     0.5596     -46.695      25.272
+ln_renda_w             -0.6299     0.6306    -0.9989     0.3178     -1.8660      0.6061
+regiao_norte           -1.0110     1.9969    -0.5063     0.6126     -4.9248      2.9027
+regiao_nordeste        -2.0449     3.0834    -0.6632     0.5072     -8.0883      3.9984
+regiao_sul             -0.0663     0.0755    -0.8771     0.3804     -0.2143      0.0818
+regiao_centro_oeste    -0.0391     0.0519    -0.7528     0.4516     -0.1408      0.0626
+sexo_dummy             -0.1928     0.3794    -0.5083     0.6112     -0.9365      0.5508
+idade_int              -0.0062     0.0076    -0.8177     0.4135     -0.0212      0.0087
+=======================================================================================
+
+F-test for Poolability: 157.36
+P-value: 0.0000
+Distribution: F(78311,3058001)
+
+Included effects: Entity
+
+[DESCRITIVAS] salvo em: ./resultados_python/estatisticas_descritivas.csv
+[OK] Gráfico scatter salvo em: ./resultados_python/scatter_diver_vs_renda.png
+[OK] Boxplot ocupação salvo em: ./resultados_python/boxplot_diver_ocupacao.png
+[OK] Boxplot perfil salvo em: ./resultados_python/boxplot_diver_perfil.png
