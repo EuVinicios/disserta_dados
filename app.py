@@ -1,5 +1,5 @@
 # app.py
-
+from pathlib import Path
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -14,14 +14,17 @@ st.set_page_config(
 # --- FUNÇÃO DE CARREGAMENTO DE DADOS (COM CACHE) ---
 @st.cache_data
 def carregar_dados_agregados():
-    """Carrega os arquivos de resumo pré-calculados."""
+    """Carrega os arquivos de resumo pré-calculados de forma robusta."""
     try:
-        df_filtros = pd.read_csv('app_data/dados_agregados_filtros.csv')
-        df_mapa = pd.read_csv('app_data/dados_mapa_uf.csv')
-        df_dist = pd.read_csv('app_data/distribuicao_diversificacao.csv')
-        df_temporal = pd.read_csv('app_data/evolucao_temporal_regional.csv')
-        df_temporal['anomes'] = pd.to_datetime(df_temporal['anomes'])
-        return df_filtros, df_mapa, df_dist, df_temporal
+        # Pega o caminho do diretório onde o script app.py está
+        diretorio_script = Path(__file__).parent
+        # Constrói o caminho para a pasta app_data
+        caminho_app_data = diretorio_script / "app_data"
+        # Carrega os arquivos usando o caminho completo
+        df_filtros = pd.read_csv(caminho_app_data / "dados_agregados_filtros.csv")
+        df_mapa = pd.read_csv(caminho_app_data / "dados_mapa_uf.csv")
+        # ... carregue os outros arquivos da mesma forma
+        return df_filtros, df_mapa #, etc
     except FileNotFoundError:
         st.error(
             "ERRO: Arquivos de dados agregados não encontrados. "
