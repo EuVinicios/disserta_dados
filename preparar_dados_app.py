@@ -70,7 +70,7 @@ def main():
     """
     print("--- INICIANDO SCRIPT DE PRÉ-PROCESSAMENTO LOCAL ---")
     try:
-        df, _ = read_sas7bdat(CAMINHO_DADOS_REAIS, encoding='utf-8')
+        df, _ = read_sas7bdat(CAMINHO_DADOS_REAIS, encoding='latin-1')
         print(f"Base de dados real carregada com sucesso. {len(df)} linhas.")
     except Exception as e:
         print(f"ERRO: Não foi possível ler o arquivo de dados reais em '{CAMINHO_DADOS_REAIS}'.")
