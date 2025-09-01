@@ -20,6 +20,14 @@ os.makedirs(PASTA_SAIDA_APP, exist_ok=True)
 def tratar_dados(df: pd.DataFrame) -> pd.DataFrame:
     """Aplica todo o tratamento e engenharia de variáveis da dissertação."""
     print("Iniciando tratamento e engenharia de variáveis...")
+
+    # Cria variável 'perfil_grupo'
+    if 'CD_PRFL_API' in df.columns:
+        df['prfl_codigo'] = df['CD_PRFL_API'].replace(0, 5).fillna(5).astype(int)
+        perfil_map = {1: 'Conservador', 2: 'Moderado', 3: 'Arrojado', 4: 'Agressivo', 5: 'Não Respondeu'}
+        df['perfil_grupo'] = df['prfl_codigo'].map(perfil_map)
+    else:
+        df['perfil_grupo'] = 'Não Informado'
     
     df = df.dropna(subset=['cliente'])
     df = df[df['cliente'] != '']
@@ -107,6 +115,17 @@ def main():
     agg_temporal = df_tratado.groupby(['anomes', 'regiao'])['diver'].mean().reset_index()
     agg_temporal.to_csv(PASTA_SAIDA_APP / 'evolucao_temporal_regional.csv', index=False)
     print(f"-> Salvo: {PASTA_SAIDA_APP / 'evolucao_temporal_regional.csv'}")
+
+    # 5. Agregado para análise por Perfil de Investidor
+    agg_perfil = df_tratado.groupby('perfil_grupo').agg(
+        diversificacao_media=('diver', 'mean'),
+        proporcao_complex=('complex', 'mean'),
+        total_clientes=('id_cliente', 'nunique')
+    ).reset_index().sort_values(by='diversificacao_media', ascending=False)
+    
+    # Salva o novo arquivo CSV na pasta de dados do app
+    agg_perfil.to_csv(PASTA_SAIDA_APP / 'perfil_investidor_agregado.csv', index=False)
+    print(f"-> Salvo: {PASTA_SAIDA_APP / 'perfil_investidor_agregado.csv'}")
     
     print("\n--- SCRIPT CONCLUÍDO COM SUCESSO! ---")
 

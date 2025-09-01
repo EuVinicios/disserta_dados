@@ -28,16 +28,17 @@ def carregar_dados_agregados():
         df_dist = pd.read_csv(caminho_app_data / "distribuicao_diversificacao.csv")
         df_temporal = pd.read_csv(caminho_app_data / "evolucao_temporal_regional.csv")
         df_temporal['anomes'] = pd.to_datetime(df_temporal['anomes'])
-        return df_filtros, df_mapa, df_dist, df_temporal
+        df_perfil = pd.read_csv('app_data/perfil_investidor_agregado.csv')
+        return df_filtros, df_mapa, df_dist, df_temporal, df_perfil
     except FileNotFoundError:
         st.error(
             "ERRO: Arquivos de dados agregados não encontrados. "
             "Certifique-se de que a pasta 'app_data' e seus arquivos CSV estão no repositório."
         )
-        return None, None, None, None
+        return None, None, None, None, None
 
 # --- CARREGANDO OS DADOS ---
-df_filtros, df_mapa, df_dist, df_temporal = carregar_dados_agregados()
+df_filtros, df_mapa, df_dist, df_temporal, df_perfil = carregar_dados_agregados()
 
 # --- TÍTULO E INTRODUÇÃO ---
 st.title("Decisões Sob Risco: Uma Análise Interativa do Investidor Brasileiro")
@@ -72,7 +73,8 @@ if df_filtros is not None:
     ]
 
     # --- ABAS COM AS ANÁLISES ---
-    tab1, tab2, tab3 = st.tabs(["📊 Visão Geral", "🌍 Análise Geográfica", "📈 Análise Temporal"])
+    # Mude esta linha no seu app.py
+    tab1, tab2, tab3, tab4 = st.tabs(["📊 Visão Geral", "🌍 Análise Geográfica", "📈 Análise Temporal", "👤 Análise por Perfil"])
 
     with tab1:
         st.header("Estatísticas Descritivas da Seleção")
@@ -132,3 +134,44 @@ if df_filtros is not None:
             labels={'anomes': 'Data', 'diver': 'Diversificação Média', 'regiao': 'Região'}
         )
         st.plotly_chart(fig_temporal, use_container_width=True)
+
+with tab4:
+    st.header("Análise por Perfil de Investidor (API)")
+    st.markdown("Esta seção explora como a diversificação e a adoção de produtos complexos variam entre os diferentes perfis de risco dos investidores.")
+
+    if df_perfil is not None:
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.subheader("Diversificação Média por Perfil")
+            fig_perfil_diver = px.bar(
+                df_perfil,
+                x='perfil_grupo',
+                y='diversificacao_media',
+                title='Diversificação Média',
+                text_auto='.2%',
+                labels={'perfil_grupo': 'Perfil de Risco', 'diversificacao_media': 'Diversificação Média'}
+            )
+            fig_perfil_diver.update_layout(xaxis={'categoryorder':'total descending'})
+            st.plotly_chart(fig_perfil_diver, use_container_width=True)
+
+        with col2:
+            st.subheader("Adoção de Produtos Complexos")
+            fig_perfil_complex = px.bar(
+                df_perfil,
+                x='perfil_grupo',
+                y='proporcao_complex',
+                title='Proporção com Ativos Complexos',
+                text_auto='.2%',
+                labels={'perfil_grupo': 'Perfil de Risco', 'proporcao_complex': 'Proporção de Investidores'}
+            )
+            fig_perfil_complex.update_layout(xaxis={'categoryorder':'total descending'})
+            st.plotly_chart(fig_perfil_complex, use_container_width=True)
+
+        with st.expander("🔍 Como interpretar estes gráficos?"):
+            st.markdown("""
+            - **Diversificação Média:** Mostra o quão diversificada é a carteira média de cada perfil. Perfis mais arrojados ou agressivos deveriam, teoricamente, apresentar maior diversificação.
+            - **Adoção de Produtos Complexos:** Indica o percentual de investidores em cada perfil que possuem ao menos um ativo financeiro considerado complexo. Este é um forte indicador de sofisticação e está diretamente ligado à **Hipótese 1** da dissertação.
+            """)
+    else:
+        st.warning("Dados de perfil não puderam ser carregados.")
