@@ -29,16 +29,17 @@ def carregar_dados_agregados():
         df_temporal = pd.read_csv(caminho_app_data / "evolucao_temporal_regional.csv")
         df_temporal['anomes'] = pd.to_datetime(df_temporal['anomes'])
         df_perfil = pd.read_csv('app_data/perfil_investidor_agregado.csv')
-        return df_filtros, df_mapa, df_dist, df_temporal, df_perfil
+        df_ocupacao = pd.read_csv('app_data/ocupacao_agregado.csv')
+        return df_filtros, df_mapa, df_dist, df_temporal, df_perfil, df_ocupacao
     except FileNotFoundError:
         st.error(
             "ERRO: Arquivos de dados agregados não encontrados. "
             "Certifique-se de que a pasta 'app_data' e seus arquivos CSV estão no repositório."
         )
-        return None, None, None, None, None
+        return None, None, None, None, None, None
 
 # --- CARREGANDO OS DADOS ---
-df_filtros, df_mapa, df_dist, df_temporal, df_perfil = carregar_dados_agregados()
+df_filtros, df_mapa, df_dist, df_temporal, df_perfil, df_ocupacao = carregar_dados_agregados()
 
 # --- TÍTULO E INTRODUÇÃO ---
 st.title("Decisões Sob Risco: Uma Análise Interativa do Investidor Brasileiro")
@@ -74,7 +75,8 @@ if df_filtros is not None:
 
     # --- ABAS COM AS ANÁLISES ---
     # Mude esta linha no seu app.py
-    tab1, tab2, tab3, tab4 = st.tabs(["📊 Visão Geral", "🌍 Análise Geográfica", "📈 Análise Temporal", "👤 Análise por Perfil"])
+    # Mude esta linha no seu app.py
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Visão Geral", "🌍 Análise Geográfica", "📈 Análise Temporal", "👤 Análise por Perfil", "💼 Análise por Ocupação"])
 
     with tab1:
         st.header("Estatísticas Descritivas da Seleção")
@@ -175,3 +177,52 @@ with tab4:
             """)
     else:
         st.warning("Dados de perfil não puderam ser carregados.")
+
+with tab5:
+    st.header("Análise por Grupo de Ocupação")
+    st.markdown("Como a diversificação do portfólio e a sofisticação financeira se distribuem entre diferentes áreas profissionais?")
+
+    if df_ocupacao is not None:
+        # Controle para o usuário selecionar o número de grupos a exibir
+        top_n = st.slider(
+            'Selecione o número de grupos de ocupação para exibir:', 
+            min_value=3, 
+            max_value=len(df_ocupacao), 
+            value=10,
+            key='slider_ocupacao'
+        )
+
+        # Gráfico de Diversificação Média
+        st.subheader(f"Top {top_n} Ocupações por Diversificação Média")
+        df_ocupacao_sorted_diver = df_ocupacao.sort_values(by='diversificacao_media', ascending=False).head(top_n)
+        
+        fig_ocup_diver = px.bar(
+            df_ocupacao_sorted_diver,
+            x='diversificacao_media',
+            y='grupo_ocupacao',
+            orientation='h', # Gráfico horizontal para melhor leitura dos nomes
+            title='Diversificação Média por Ocupação',
+            text_auto='.2%',
+            labels={'grupo_ocupacao': 'Grupo de Ocupação', 'diversificacao_media': 'Diversificação Média'}
+        )
+        fig_ocup_diver.update_layout(yaxis={'categoryorder':'total ascending'})
+        st.plotly_chart(fig_ocup_diver, use_container_width=True)
+
+        # Gráfico de Proporção com Ativos Complexos
+        st.subheader(f"Top {top_n} Ocupações por Adoção de Produtos Complexos")
+        df_ocupacao_sorted_complex = df_ocupacao.sort_values(by='proporcao_complex', ascending=False).head(top_n)
+
+        fig_ocup_complex = px.bar(
+            df_ocupacao_sorted_complex,
+            x='proporcao_complex',
+            y='grupo_ocupacao',
+            orientation='h',
+            title='Proporção com Ativos Complexos por Ocupação',
+            text_auto='.2%',
+            labels={'grupo_ocupacao': 'Grupo de Ocupação', 'proporcao_complex': 'Proporção de Investidores'}
+        )
+        fig_ocup_complex.update_layout(yaxis={'categoryorder':'total ascending'})
+        st.plotly_chart(fig_ocup_complex, use_container_width=True)
+
+    else:
+        st.warning("Dados de ocupação não puderam ser carregados.")

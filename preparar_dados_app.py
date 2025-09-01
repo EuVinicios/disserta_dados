@@ -29,6 +29,26 @@ def tratar_dados(df: pd.DataFrame) -> pd.DataFrame:
     else:
         df['perfil_grupo'] = 'Não Informado'
     
+    # Cria variável 'grupo_ocupacao'
+    if 'DS_OCUPACAO' in df.columns:
+        ocup_map = {
+            'Administração': r'ADMINISTRADOR|CONTADOR|ANALISTA|CONSULTOR|ECONOMISTA',
+            'Servidor Público': r'SERVIDOR PUBLICO|DEPUTADO|PREFEITO|SECRETARIO|MAGISTRADO|PROCURADOR',
+            'Saúde': r'MEDICO|ENFERMEIRO|FISIOTERAPEUTA|ODONTOLOGO|FARMACEUTICO|NUTRICIONISTA|FONOAUDIOLOGO|PSICOLOGO|TERAPEUTA',
+            'Educação': r'PROFESSOR|ESTUDANTE|ESTAGIARIO|BOLSISTA|PEDAGOGO',
+            'Autônomo/Comércio': r'COMERCIANTE|AMBULANTE|TAXISTA|VENDEDOR|FEIRANTE|REPRESENTANTE COMERCIAL',
+            'Agropecuária': r'AGRICULTOR|PECUARISTA|PESCADOR|AVICULTOR|RURAL|FLORICULTOR|AGRONOMO|AGROPECUARISTA',
+            'Industrial': r'MECANICO|ELETRICISTA|OPERADOR|CONSTRUCAO|MARCENEIRO|INDUSTRIARIO|SERRALHEIRO|TECNIC',
+            'Justiça': r'ADVOGADO|DELEGADO|DEFENSOR|PROMOTOR|JUIZ|OFICIAL DE JUSTICA|TABELIAO|CARTORIO',
+            'Segurança': r'POLICIAL|MILITAR|VIGILANTE|SEGURANCA|BOMBEIRO',
+            'Cultura/Comunicação': r'MUSICO|ATOR|ARTESAO|JORNALISTA|ESCULTOR|PUBLICITARIO|FOTOGRAFO|LOCUTOR'
+        }
+        df['grupo_ocupacao'] = 'Outros' # Define 'Outros' como padrão
+        for grupo, regex in ocup_map.items():
+            df.loc[df['DS_OCUPACAO'].str.contains(regex, case=False, na=False), 'grupo_ocupacao'] = grupo
+    else:
+        df['grupo_ocupacao'] = 'Não Informado'
+
     df = df.dropna(subset=['cliente'])
     df = df[df['cliente'] != '']
     df['id_cliente'] = df.groupby('cliente').ngroup()
@@ -126,6 +146,17 @@ def main():
     # Salva o novo arquivo CSV na pasta de dados do app
     agg_perfil.to_csv(PASTA_SAIDA_APP / 'perfil_investidor_agregado.csv', index=False)
     print(f"-> Salvo: {PASTA_SAIDA_APP / 'perfil_investidor_agregado.csv'}")
+
+     # 6. Agregado para análise por Grupo de Ocupação
+    agg_ocupacao = df_tratado.groupby('grupo_ocupacao').agg(
+        diversificacao_media=('diver', 'mean'),
+        proporcao_complex=('complex', 'mean'),
+        total_clientes=('id_cliente', 'nunique')
+    ).reset_index().sort_values(by='diversificacao_media', ascending=False)
+    
+    # Salva o novo arquivo CSV
+    agg_ocupacao.to_csv(PASTA_SAIDA_APP / 'ocupacao_agregado.csv', index=False)
+    print(f"-> Salvo: {PASTA_SAIDA_APP / 'ocupacao_agregado.csv'}")
     
     print("\n--- SCRIPT CONCLUÍDO COM SUCESSO! ---")
 
