@@ -47,4 +47,3 @@ pyreadstat
 linearmodels
 streamlit
 plotly
-go
