@@ -116,8 +116,10 @@ def main():
     agg_filtros.to_csv(PASTA_SAIDA_APP / 'dados_agregados_filtros.csv', index=False)
     print(f"-> Salvo: {PASTA_SAIDA_APP / 'dados_agregados_filtros.csv'}")
 
-    # 2. Agregado para o mapa por UF
-    agg_mapa = df_tratado.groupby('UF_CADASTRO').agg(
+    # 2. Agregado para o mapa por UF (com filtro de segurança)
+    df_mapa_filtrado = df_tratado[df_tratado['UF_CADASTRO'].notna() & (df_tratado['UF_CADASTRO'] != '')]
+    
+    agg_mapa = df_mapa_filtrado.groupby('UF_CADASTRO').agg(
         diversificacao_media=('diver', 'mean'),
         renda_media=('renda', 'mean')
     ).reset_index()
@@ -159,6 +161,19 @@ def main():
     print(f"-> Salvo: {PASTA_SAIDA_APP / 'ocupacao_agregado.csv'}")
     
     print("\n--- SCRIPT CONCLUÍDO COM SUCESSO! ---")
+
+    # 7. Agregado para a análise de interação Renda x Complexidade
+    agg_interacao = df_tratado.groupby(['faixa_renda', 'complex']).agg(
+        diversificacao_media=('diver', 'mean'),
+        total_clientes=('id_cliente', 'nunique')
+    ).reset_index()
+    
+    # Mapeia 0 e 1 para rótulos mais claros para o gráfico
+    agg_interacao['complex'] = agg_interacao['complex'].map({0: 'Apenas Ativos Simples', 1: 'Possui Ativos Complexos'})
+
+    # Salva o novo arquivo CSV
+    agg_interacao.to_csv(PASTA_SAIDA_APP / 'interacao_renda_complex_agregado.csv', index=False)
+    print(f"-> Salvo: {PASTA_SAIDA_APP / 'interacao_renda_complex_agregado.csv'}")
 
 if __name__ == '__main__':
     main()

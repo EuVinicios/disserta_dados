@@ -30,16 +30,17 @@ def carregar_dados_agregados():
         df_temporal['anomes'] = pd.to_datetime(df_temporal['anomes'])
         df_perfil = pd.read_csv('app_data/perfil_investidor_agregado.csv')
         df_ocupacao = pd.read_csv('app_data/ocupacao_agregado.csv')
-        return df_filtros, df_mapa, df_dist, df_temporal, df_perfil, df_ocupacao
+        df_interacao = pd.read_csv('app_data/interacao_renda_complex_agregado.csv')
+        return df_filtros, df_mapa, df_dist, df_temporal, df_perfil, df_ocupacao, df_interacao
     except FileNotFoundError:
         st.error(
             "ERRO: Arquivos de dados agregados não encontrados. "
             "Certifique-se de que a pasta 'app_data' e seus arquivos CSV estão no repositório."
         )
-        return None, None, None, None, None, None
+        return None, None, None, None, None, None, None
 
 # --- CARREGANDO OS DADOS ---
-df_filtros, df_mapa, df_dist, df_temporal, df_perfil, df_ocupacao = carregar_dados_agregados()
+df_filtros, df_mapa, df_dist, df_temporal, df_perfil, df_ocupacao, df_interacao = carregar_dados_agregados()
 
 # --- TÍTULO E INTRODUÇÃO ---
 st.title("Decisões Sob Risco: Uma Análise Interativa do Investidor Brasileiro")
@@ -76,7 +77,7 @@ if df_filtros is not None:
     # --- ABAS COM AS ANÁLISES ---
     # Mude esta linha no seu app.py
     # Mude esta linha no seu app.py
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Visão Geral", "🌍 Análise Geográfica", "📈 Análise Temporal", "👤 Análise por Perfil", "💼 Análise por Ocupação"])
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 Visão Geral", "🌍 Análise Geográfica", "📈 Análise Temporal", "👤 Análise por Perfil", "💼 Análise por Ocupação", "💡 Renda vs. Complexidade"])
 
     with tab1:
         st.header("Estatísticas Descritivas da Seleção")
@@ -95,33 +96,57 @@ if df_filtros is not None:
         fig_dist = px.bar(df_dist, x='faixa_diversificacao', y='percentual', labels={'faixa_diversificacao': 'Nível de Diversificação (0 a 1)', 'percentual': 'Percentual de Observações'})
         st.plotly_chart(fig_dist, use_container_width=True)
 
-    with tab2:
-        st.header("Análise da Diversificação pelo Brasil")
-        st.info("O mapa abaixo não é afetado pelos filtros da barra lateral.")
+with tab2:
+    st.header("Análise Geográfica do Investidor Brasileiro")
+    st.markdown("Explore como as métricas financeiras se distribuem pelo território nacional.")
+
+    # Importa a biblioteca para ler o arquivo JSON
+    import json
+
+    # Tenta carregar o arquivo GeoJSON que você baixou
+    try:
+        with open('brasil_estados.json') as f:
+            geojson_brasil = json.load(f)
         
-        # (Nota: Este mapa requer um arquivo GeoJSON. O código está aqui como um exemplo funcional que você pode adaptar)
-        st.subheader("Diversificação Média por Estado")
-        st.markdown("Passe o mouse sobre um estado para ver os detalhes. Infelizmente, não possuo o arquivo GeoJSON para renderizar o mapa neste momento, mas o código está pronto.")
-        # O código abaixo funcionaria se você tivesse um arquivo 'brasil_estados.json'
-        # import json
-        # try:
-        #     with open('brasil_estados.json') as f:
-        #         geojson_brasil = json.load(f)
-        #     fig_mapa = px.choropleth(
-        #         df_mapa,
-        #         geojson=geojson_brasil,
-        #         locations='UF_CADASTRO',
-        #         featureidkey="properties.sigla",
-        #         color='diversificacao_media',
-        #         color_continuous_scale="Viridis",
-        #         scope="south america",
-        #         hover_name='UF_CADASTRO',
-        #         hover_data={'renda_media': ':.2f'}
-        #     )
-        #     fig_mapa.update_geos(fitbounds="locations", visible=False)
-        #     st.plotly_chart(fig_mapa, use_container_width=True)
-        # except FileNotFoundError:
-        # st.error("Arquivo 'brasil_estados.json' não encontrado. O mapa não pode ser exibido.")
+        if df_mapa is not None:
+            # Controle para o usuário escolher a métrica
+            metrica_selecionada = st.selectbox(
+                "Selecione a Métrica para Visualizar no Mapa:",
+                options=['Diversificação Média', 'Renda Média']
+            )
+
+            # Mapeia a escolha do usuário para o nome da coluna no DataFrame
+            coluna_cor = 'diversificacao_media' if metrica_selecionada == 'Diversificação Média' else 'renda_media'
+
+            # Cria o mapa interativo
+            fig_mapa = px.choropleth(
+                df_mapa,
+                geojson=geojson_brasil,
+                locations='UF_CADASTRO', # Coluna do seu DF com a sigla do estado
+                featureidkey="properties.sigla", # Caminho para a sigla do estado no arquivo GeoJSON
+                color=coluna_cor,
+                color_continuous_scale="Viridis",
+                scope="south america", # Foca o mapa na América do Sul
+                hover_name='UF_CADASTRO',
+                hover_data={'diversificacao_media': ':.2%', 'renda_media': ':,.2f'},
+                labels={'diversificacao_media': 'Diversificação Média', 'renda_media': 'Renda Média (R$)'}
+            )
+            fig_mapa.update_geos(fitbounds="locations", visible=False)
+            fig_mapa.update_layout(
+                title_text=f"{metrica_selecionada} por Estado",
+                margin={"r":0,"t":40,"l":0,"b":0}
+            )
+            
+            st.plotly_chart(fig_mapa, use_container_width=True)
+
+        else:
+            st.warning("Dados do mapa não puderam ser carregados.")
+
+    except FileNotFoundError:
+        st.error(
+            "ERRO: Arquivo `brasil_estados.json` não encontrado. "
+            "Por favor, baixe o arquivo GeoJSON dos estados brasileiros e salve-o na pasta raiz do projeto."
+        )
 
     with tab3:
         st.header("Evolução Temporal da Diversificação")
@@ -226,3 +251,56 @@ with tab5:
 
     else:
         st.warning("Dados de ocupação não puderam ser carregados.")
+
+with tab6:
+    st.header("Análise de Interação: Renda, Complexidade e Diversificação")
+    st.markdown("""
+    Esta seção explora como a estrutura do portfólio dos investidores difere entre as faixas de renda.
+    """)
+
+    if df_interacao is not None:
+        # --- Parte 1: KPIs Claros ---
+        st.subheader("Diversificação Média por Grupo")
+        col1, col2 = st.columns(2)
+        
+        # Filtra os dados para cada grupo
+        media_complexos = df_interacao[df_interacao['complex'] == 'Possui Ativos Complexos']['diversificacao_media'].mean()
+        media_simples = df_interacao[df_interacao['complex'] == 'Apenas Ativos Simples']['diversificacao_media'].mean()
+
+        col1.metric("Média de Diversificação (com Ativos Complexos)", f"{media_complexos:.2%}")
+        col2.metric("Média de Diversificação (apenas Ativos Simples)", f"{media_simples:.2%}")
+
+        st.markdown("---")
+
+        # --- Parte 2: Gráfico de Composição ---
+        st.subheader("Composição de Investidores por Faixa de Renda")
+
+        # Usamos o total de clientes para criar um gráfico de barras 100% empilhado
+        fig_composicao = px.bar(
+            df_interacao,
+            x="faixa_renda",
+            y="total_clientes",
+            color="complex",
+            title="Como cada Faixa de Renda se divide entre Carteiras Simples vs. Complexas",
+            labels={
+                "faixa_renda": "Faixa de Renda Mensal",
+                "total_clientes": "Número de Clientes",
+                "complex": "Tipo de Carteira"
+            },
+            text_auto=True # Adiciona os números nas barras
+        )
+        # Opcional: para forçar 100% (se preferir proporção em vez de contagem)
+        # fig_composicao = px.bar(..., barnorm='percent')
+        
+        st.plotly_chart(fig_composicao, use_container_width=True)
+
+        with st.expander("🔍 Como interpretar estes dados?"):
+            st.markdown("""
+            A análise mostra dois pontos importantes:
+
+            1.  **KPIs:** A diversificação média para investidores com *apenas ativos simples* é **zero**, como definido pela metodologia. Em contraste, investidores que adotam produtos complexos atingem uma diversificação média de aproximadamente **32%**.
+
+            2.  **Composição:** O gráfico de barras mostra a quantidade de clientes em cada categoria. Podemos observar a distribuição de investidores que optam ou não por produtos complexos dentro de cada faixa de renda. Isso nos permite analisar se a propensão a ter ativos complexos muda significativamente com o aumento da renda.
+            """)
+    else:
+        st.warning("Dados da análise de interação não puderam ser carregados.")
