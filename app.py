@@ -75,9 +75,15 @@ if df_filtros is not None:
     ]
 
     # --- ABAS COM AS ANÁLISES ---
-    # Mude esta linha no seu app.py
-    # Mude esta linha no seu app.py
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 Visão Geral", "🌍 Análise Geográfica", "📈 Análise Temporal", "👤 Análise por Perfil", "💼 Análise por Ocupação", "💡 Renda vs. Complexidade"])
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+        "📊 Visão Geral", 
+        "🌍 Análise Geográfica", 
+        "📈 Análise Temporal", 
+        "👤 Análise por Perfil", 
+        "💼 Análise por Ocupação", 
+        "💡 Renda vs. Complexidade",
+        "📜 Dissertação e Materiais"  # <-- NOVA ABA
+    ])
 
     with tab1:
         st.header("Estatísticas Descritivas da Seleção")
@@ -100,52 +106,62 @@ with tab2:
     st.header("Análise Geográfica do Investidor Brasileiro")
     st.markdown("Explore como as métricas financeiras se distribuem pelo território nacional.")
 
-    # Importa a biblioteca para ler o arquivo JSON
     import json
+    from pathlib import Path
+    import plotly.express as px
+    import pandas as pd
 
-    # Tenta carregar o arquivo GeoJSON que você baixou
+    diretorio_script = Path(__file__).parent
+    caminho_geojson = diretorio_script / "brasil_estados.json"
+
     try:
-        with open('brasil_estados.json') as f:
+        with open(caminho_geojson, 'r', encoding='utf-8') as f:
             geojson_brasil = json.load(f)
-        
+
         if df_mapa is not None:
-            # Controle para o usuário escolher a métrica
+            # garante siglas em duas letras maiúsculas
+            df_mapa['UF_CADASTRO'] = df_mapa['UF_CADASTRO'].astype(str).str.upper().str.strip()
+
             metrica_selecionada = st.selectbox(
                 "Selecione a Métrica para Visualizar no Mapa:",
                 options=['Diversificação Média', 'Renda Média']
             )
-
-            # Mapeia a escolha do usuário para o nome da coluna no DataFrame
             coluna_cor = 'diversificacao_media' if metrica_selecionada == 'Diversificação Média' else 'renda_media'
 
-            # Cria o mapa interativo
             fig_mapa = px.choropleth(
                 df_mapa,
                 geojson=geojson_brasil,
-                locations='UF_CADASTRO', # Coluna do seu DF com a sigla do estado
-                featureidkey="properties.sigla", # Caminho para a sigla do estado no arquivo GeoJSON
+                locations='UF_CADASTRO',
+                featureidkey="id",  # <— AQUI o conserto (ou use "properties.SIGLA")
                 color=coluna_cor,
                 color_continuous_scale="Viridis",
-                scope="south america", # Foca o mapa na América do Sul
                 hover_name='UF_CADASTRO',
                 hover_data={'diversificacao_media': ':.2%', 'renda_media': ':,.2f'},
-                labels={'diversificacao_media': 'Diversificação Média', 'renda_media': 'Renda Média (R$)'}
+                labels={'diversificacao_media': 'Diversificação Média', 'renda_media': 'Renda Média (R$)'},
+                projection="mercator"
             )
             fig_mapa.update_geos(fitbounds="locations", visible=False)
             fig_mapa.update_layout(
                 title_text=f"{metrica_selecionada} por Estado",
                 margin={"r":0,"t":40,"l":0,"b":0}
             )
-            
             st.plotly_chart(fig_mapa, use_container_width=True)
 
+            # diagnóstico opcional: mostre siglas sem correspondência
+            try:
+                siglas_geo = {f['id'] for f in geojson_brasil['features']}
+                faltando = sorted(set(df_mapa['UF_CADASTRO']) - siglas_geo)
+                if faltando:
+                    st.info(f"Estados sem correspondência no GeoJSON: {', '.join(faltando)}")
+            except Exception:
+                pass
         else:
             st.warning("Dados do mapa não puderam ser carregados.")
-
     except FileNotFoundError:
         st.error(
-            "ERRO: Arquivo `brasil_estados.json` não encontrado. "
-            "Por favor, baixe o arquivo GeoJSON dos estados brasileiros e salve-o na pasta raiz do projeto."
+            f"ERRO: Arquivo `brasil_estados.json` não encontrado no caminho esperado. "
+            f"Verifique se o arquivo está na mesma pasta que o 'app.py'. "
+            f"Caminho procurado: {caminho_geojson}"
         )
 
     with tab3:
@@ -304,3 +320,72 @@ with tab6:
             """)
     else:
         st.warning("Dados da análise de interação não puderam ser carregados.")
+
+        # Adicione este bloco de código no final do seu app.py
+
+# A nova aba para a dissertação e materiais
+with tab7:
+    st.header("Dissertação e Materiais de Apoio")
+    st.markdown("Acesse aqui o trabalho completo, o podcast explicativo e os scripts de análise.")
+    
+    # Importações necessárias para esta aba
+    from pathlib import Path
+    import base64
+
+    # Define o caminho para a pasta de materiais de forma robusta
+    diretorio_script = Path(__file__).parent
+    caminho_materiais = diretorio_script / "materiais"
+
+    # --- Seção 1: Leitor de PDF ---
+    st.subheader("Leia a Dissertação Completa")
+    
+    # Define o caminho para o arquivo PDF
+    arquivo_pdf_path = caminho_materiais / "DISSERTAÇÃO_Vinicios.pdf"
+
+    try:
+        # Lê o arquivo PDF em modo binário
+        with open(arquivo_pdf_path, "rb") as f:
+            base64_pdf = base64.b64encode(f.read()).decode('utf-8')
+        
+        # Cria um "embed" do PDF usando HTML e base64
+        pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="800" type="application/pdf"></iframe>'
+        st.markdown(pdf_display, unsafe_allow_html=True)
+        
+    except FileNotFoundError:
+        st.error(f"ERRO: Arquivo da dissertação ('{arquivo_pdf_path.name}') não encontrado na pasta 'materiais'.")
+
+    st.markdown("---")
+
+    # --- Seção 2: Player de Áudio (Podcast) ---
+    st.subheader("Podcast: A Pesquisa em 15 Minutos")
+    
+    # Define o caminho para o arquivo de áudio
+    arquivo_audio_path = caminho_materiais / "podcast_dissertacao.mp3" # <-- Verifique se o nome do seu áudio está correto aqui
+
+    try:
+        # Lê o arquivo de áudio e exibe o player
+        st.audio(str(arquivo_audio_path))
+    except FileNotFoundError:
+        st.error(f"ERRO: Arquivo de áudio ('{arquivo_audio_path.name}') não encontrado na pasta 'materiais'.")
+
+    st.markdown("---")
+
+    # --- Seção 3: Botão de Download do Script Stata ---
+    st.subheader("Faça o Download do Script de Análise (.do)")
+
+    # Define o caminho para o arquivo .do
+    arquivo_do_path = caminho_materiais / "Trabalho_Completo_Reestruturado.do"
+
+    try:
+        # Lê o conteúdo do arquivo para o botão de download
+        with open(arquivo_do_path, "r", encoding="utf-8") as f:
+            do_file_content = f.read()
+        
+        st.download_button(
+            label="Clique aqui para baixar o arquivo .do",
+            data=do_file_content,
+            file_name="script_dissertacao_stata.do",
+            mime="text/plain"
+        )
+    except FileNotFoundError:
+        st.error(f"ERRO: Arquivo do Stata ('{arquivo_do_path.name}') não encontrado na pasta 'materiais'.")
