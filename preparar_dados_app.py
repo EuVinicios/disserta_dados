@@ -175,5 +175,24 @@ def main():
     agg_interacao.to_csv(PASTA_SAIDA_APP / 'interacao_renda_complex_agregado.csv', index=False)
     print(f"-> Salvo: {PASTA_SAIDA_APP / 'interacao_renda_complex_agregado.csv'}")
 
+    # Adicione este bloco dentro da função main() do seu preparar_dados_app.py
+
+    # 8. Agregado para o novo Gráfico de Barras Categórico (Visão Geral)
+    bins = [-0.01, 0.0, 0.25, 0.50, 1.01]
+    labels = ['Nenhuma Diversificação (0%)', 'Baixa (1%-25%)', 'Média (26%-50%)', 'Alta (>50%)']
+    df_tratado['nivel_diversificacao'] = pd.cut(df_tratado['diver'], bins=bins, labels=labels, right=True)
+    
+    dist_categorica = df_tratado['nivel_diversificacao'].value_counts(normalize=True).reset_index()
+    dist_categorica.columns = ['nivel_diversificacao', 'percentual']
+    
+    dist_categorica.to_csv(PASTA_SAIDA_APP / 'dist_categorica_diversificacao.csv', index=False)
+    print(f"-> Salvo: {PASTA_SAIDA_APP / 'dist_categorica_diversificacao.csv'}")
+
+    # 9. Amostra de dados para o Box Plot (para performance)
+    # Pegamos uma amostra aleatória de 50,000 pontos para manter o app rápido
+    df_sample = df_tratado[['regiao', 'faixa_renda', 'diver']].sample(n=50000, random_state=42)
+    df_sample.to_csv(PASTA_SAIDA_APP / 'sample_diversificacao_boxplot.csv', index=False)
+    print(f"-> Salvo: {PASTA_SAIDA_APP / 'sample_diversificacao_boxplot.csv'}")
+
 if __name__ == '__main__':
     main()
