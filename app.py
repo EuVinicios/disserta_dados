@@ -637,54 +637,95 @@ with tabNotas:
     st.header("Notas de Pesquisa")
     st.caption("Mini-explicações dos dois achados com base nos dados agregados do app.")
 
-    # ---------- 3.1 Paradoxo da Complexidade: efeito por faixa de renda ----------
-    st.subheader("Paradoxo da Complexidade — interação com renda")
-    order_bands = _order_income_bands(df_filtros)
+# ---------- 3.1 Paradoxo da Complexidade: efeito por faixa de renda ----------
+st.subheader("Paradoxo da Complexidade — interação com renda")
+order_bands = _order_income_bands(df_filtros)
 
-    # Médias de diversificação por faixa x (complexo vs simples)
-    df_means = (df_interacao.groupby(["faixa_renda","complex"])["diversificacao_media"]
-                .mean().reset_index())
+# Garantia de coluna n (caso seu df não tenha total_clientes)
+df_int = df_interacao.copy()
+if "total_clientes" not in df_int.columns:
+    df_int["total_clientes"] = 1
 
-    # Nomes amigáveis
-    mapa_tipo = {
-        "Possui Ativos Complexos": "Com complexos",
-        "Apenas Ativos Simples": "Só simples",
-    }
-    df_means["tipo"] = df_means["complex"].map(mapa_tipo)
+# Médias e tamanhos por faixa x (complexo vs simples)
+df_means = (df_int
+            .groupby(["faixa_renda","complex"], dropna=True)
+            .agg(diversificacao_media=("diversificacao_media","mean"),
+                 n=("total_clientes","sum"))
+            .reset_index())
 
-    fig_int = px.line(
-        df_means,
-        x="faixa_renda", y="diversificacao_media", color="tipo", markers=True,
-        category_orders={"faixa_renda": order_bands},
-        labels={"faixa_renda": "Faixa de renda", "diversificacao_media": "Diversificação média", "tipo": ""},
-        title="Diversificação média por faixa de renda — com e sem ativos complexos"
+mapa_tipo = {"Possui Ativos Complexos": "Com complexos",
+             "Apenas Ativos Simples": "Só simples"}
+df_means["tipo"] = df_means["complex"].map(mapa_tipo)
+
+# Tabela larga para comparar lado a lado
+piv = (df_means.pivot_table(index="faixa_renda",
+                            columns="tipo",
+                            values="diversificacao_media")
+                 .reindex(order_bands))
+piv_n = (df_means.pivot_table(index="faixa_renda",
+                              columns="tipo",
+                              values="n",
+                              fill_value=0)
+                 .reindex(order_bands))
+
+# ----- (A) DUMBBELL: comparação por faixa (horizontal) -----
+import plotly.graph_objects as go
+ys = list(piv.index)
+x_simple  = [piv.loc[y, "Só simples"]     if "Só simples"     in piv.columns else None for y in ys]
+x_complex = [piv.loc[y, "Com complexos"]  if "Com complexos"  in piv.columns else None for y in ys]
+n_simple  = [piv_n.loc[y, "Só simples"]   if "Só simples"     in piv_n.columns else 0 for y in ys]
+n_complex = [piv_n.loc[y, "Com complexos"]if "Com complexos"  in piv_n.columns else 0 for y in ys]
+
+fig_db = go.Figure()
+# linhas que conectam os dois pontos de cada faixa
+for y, a, b in zip(ys, x_simple, x_complex):
+    if pd.notnull(a) and pd.notnull(b):
+        fig_db.add_trace(go.Scatter(x=[a, b], y=[y, y], mode="lines",
+                                    line=dict(width=2), showlegend=False, hoverinfo="skip"))
+# marcadores
+fig_db.add_trace(go.Scatter(
+    x=x_simple, y=ys, mode="markers", name="Só simples", marker=dict(size=10),
+    hovertemplate="Faixa: %{y}<br>Só simples: %{x:.2%}<br>n=%{customdata}",
+    customdata=n_simple
+))
+fig_db.add_trace(go.Scatter(
+    x=x_complex, y=ys, mode="markers", name="Com complexos", marker=dict(size=10),
+    hovertemplate="Faixa: %{y}<br>Com complexos: %{x:.2%}<br>n=%{customdata}",
+    customdata=n_complex
+))
+fig_db.update_layout(
+    title="Comparação por faixa — quanto muda ao incluir ativos complexos",
+    xaxis=dict(tickformat=".0%"),
+    yaxis=dict(categoryorder="array", categoryarray=order_bands),
+    margin=dict(l=10, r=10, t=60, b=10)
+)
+st.plotly_chart(fig_db, use_container_width=True)
+
+# ----- (B) UPLIFT: barras em p.p. por faixa (ordenado) -----
+piv_u = piv.copy()
+piv_u["uplift_pp"] = (piv_u.get("Com complexos") - piv_u.get("Só simples")) * 100
+piv_u = piv_u.reset_index().sort_values("uplift_pp", ascending=False)
+
+fig_uplift = px.bar(
+    piv_u, x="faixa_renda", y="uplift_pp",
+    labels={"faixa_renda": "Faixa de renda", "uplift_pp": "Uplift de diversificação (p.p.)"},
+    title="Uplift observado ao incluir ativos complexos (por faixa de renda)",
+    text_auto=".1f"
+)
+fig_uplift.update_layout(
+    xaxis={"categoryorder": "array", "categoryarray": list(piv_u["faixa_renda"])},
+    margin=dict(l=10, r=10, t=60, b=10)
+)
+st.plotly_chart(fig_uplift, use_container_width=True)
+
+with st.expander("Como ler / por que importa"):
+    st.markdown(
+        "- **Dumbbell (gráfico de cima):** cada faixa tem **dois pontos** (Só simples vs. Com complexos); "
+        "o traço mostra o **ganho** de diversificação dentro da faixa.\n"
+        "- **Barras (gráfico de baixo):** mostram o **uplift em p.p.** por faixa. "
+        "Quanto maior a barra, maior o ganho ao reduzir a barreira de complexidade.\n"
+        "- O hover exibe o **tamanho da amostra (n)** de cada grupo."
     )
-    st.plotly_chart(fig_int, use_container_width=True)
-
-    # Uplift por faixa (proxy do efeito marginal observado)
-    piv = df_means.pivot(index="faixa_renda", columns="tipo", values="diversificacao_media")
-    for col in ["Com complexos", "Só simples"]:
-        if col not in piv.columns:
-            piv[col] = pd.NA
-    piv = piv.reset_index()
-    piv["uplift_pp"] = (piv["Com complexos"] - piv["Só simples"]) * 100  # p.p.
-
-    fig_uplift = px.bar(
-        piv, x="faixa_renda", y="uplift_pp",
-        category_orders={"faixa_renda": order_bands},
-        labels={"faixa_renda": "Faixa de renda", "uplift_pp": "Uplift de diversificação (p.p.)"},
-        title="Uplift observado ao incluir ativos complexos (por faixa de renda)",
-        text_auto=".1f"
-    )
-    st.plotly_chart(fig_uplift, use_container_width=True)
-
-    with st.expander("Como ler / por que importa"):
-        st.markdown(
-            "- As linhas mostram a **diferença de nível** (com vs. sem complexos) ao longo da renda.\n"
-            "- As barras mostram o **uplift observado** em pontos percentuais para cada faixa.\n"
-            "- **Interpretação**: reduzir a barreira cognitiva (onboarding didático, jargão simples) tende a elevar a diversificação, "
-            "especialmente nas faixas mais baixas."
-        )
 
     # ---------- 3.2 Efeito Isolamento da Riqueza: dispersão regional vs renda ----------
     st.subheader("Efeito Isolamento da Riqueza — dispersão regional cai na alta renda")
