@@ -301,6 +301,7 @@ with home:
     st.markdown("### Dois achados que mudam a conversa")
 
     colL, colR = st.columns(2)
+    # ----------------- Paradoxo da Complexidade -----------------
     with colL:
         st.markdown("<div class='feature'>", unsafe_allow_html=True)
         st.markdown("<span class='tag'>🧩 Paradoxo da Complexidade</span>", unsafe_allow_html=True)
@@ -315,11 +316,22 @@ with home:
             _toast("Abra a aba 💡 Renda vs. Complexidade para ver a composição por faixas.")
         with st.expander("Por que isso importa?"):
             st.markdown(
-                "- Mostra que **didática e onboarding** reduzem a barreira mental.\n"
-                "- Educação segmentada e produtos 'degustação' aceleram a adoção da **2ª/3ª classe**."
+                "- **Didática e onboarding** reduzem a barreira mental e aceleram a adoção da 2ª/3ª classe.\n"
+                "- Gera **diversificação prática** especialmente entre investidores de renda mais baixa."
+            )
+        # >>> NOVO: Mais detalhes (da dissertação)
+        with st.expander("Mais detalhes (da dissertação)"):
+            st.markdown(
+                "- A dissertação mostra que o efeito da **complexidade** sobre a diversificação **depende da renda** "
+                "(termo de interação significativo): o ganho é **maior** para rendas mais baixas, e **se atenua** nas rendas mais altas.\n"
+                "- Interpretação: quem tem renda mais baixa usa produtos “complexos” como **porta de entrada para diversificar**; "
+                "já rendas muito altas podem usar complexos para **apostas concentradas** (tipo-loteria), o que não amplia a diversificação.\n"
+                "- Base teórica: **preferência por simplicidade** — escolhas com muitos componentes têm custo cognitivo, reduzindo a atratividade "
+                "mesmo quando o retorno esperado é maior (logo, **reduzir a complexidade percebida** aumenta a adoção)."
             )
         st.markdown("</div>", unsafe_allow_html=True)
 
+    # ----------------- Efeito Isolamento da Riqueza -----------------
     with colR:
         st.markdown("<div class='feature'>", unsafe_allow_html=True)
         st.markdown("<span class='tag'>💎 Efeito Isolamento da Riqueza</span>", unsafe_allow_html=True)
@@ -342,8 +354,18 @@ with home:
             _toast("Abra as abas 📈 Análise Temporal e 🌍 Geográfica e compare regiões/tempo.")
         with st.expander("Por que isso importa?"):
             st.markdown(
-                "- Estratégia **por contexto**: regiões menos estáveis → simplicidade e liquidez; estáveis → escada de complexidade.\n"
-                "- Em **alta renda**, foque na curadoria e eficiência fiscal (o contexto pesa menos)."
+                "- **Estratégia por contexto**: regiões menos estáveis → simplicidade e liquidez; estáveis → escada de complexidade.\n"
+                "- Em **alta renda**, foque em curadoria, eficiência fiscal e objetivos — o contexto local pesa menos."
+            )
+        # >>> NOVO: Mais detalhes (da dissertação)
+        with st.expander("Mais detalhes (da dissertação)"):
+            st.markdown(
+                "- A hipótese de que o **IDH** impactaria a diversificação **não se sustenta** entre **alta renda** "
+                "(coeficiente do IDH **insignificante** na subamostra de alta renda).\n"
+                "- Interpretação central: a **riqueza funciona como isolante** — acesso a assessoria qualificada, "
+                "fontes nacionais/globais de informação e plataformas ampliam horizontes além do município de residência.\n"
+                "- Implicações: políticas e ações comerciais devem diferenciar intervenções por **nível de renda**; "
+                "para alta renda, o contexto local explica menos do comportamento de carteira."
             )
         st.markdown("</div>", unsafe_allow_html=True)
 
