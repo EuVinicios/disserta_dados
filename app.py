@@ -1,6 +1,6 @@
 # app.py
 from pathlib import Path
-import os  # <- para ler GA_ID via variável de ambiente
+import os  # para GA_ID via env var
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -27,16 +27,14 @@ def _base_dir() -> Path:
 
 def _inject_analytics():
     """Injeta Google Analytics se houver GA_ID (env var ou secrets). Silencioso se não houver."""
-    ga_id = os.getenv("GA_ID")  # 1) tenta variável de ambiente (seguro local/dev)
+    ga_id = os.getenv("GA_ID")
     if not ga_id:
         try:
-            ga_id = st.secrets["GA_ID"]  # 2) tenta secrets (pode não existir localmente)
+            ga_id = st.secrets["GA_ID"]
         except Exception:
             ga_id = None
-
     if not ga_id:
-        return  # sem GA_ID, não injeta nada
-
+        return
     st.components.v1.html(f"""
     <script async src="https://www.googletagmanager.com/gtag/js?id={ga_id}"></script>
     <script>
@@ -48,7 +46,6 @@ def _inject_analytics():
     """, height=0)
 
 def _get_query_params() -> dict:
-    # Compatível com versões novas/antigas do Streamlit
     try:
         return dict(st.query_params)
     except AttributeError:
@@ -56,7 +53,6 @@ def _get_query_params() -> dict:
         return {k: (v[0] if isinstance(v, list) and len(v) == 1 else ",".join(v)) for k, v in qp.items()}
 
 def _set_query_params(d: dict):
-    # Evita None; converte listas em strings CSV
     clean = {k: (",".join(v) if isinstance(v, (list, tuple)) else str(v)) for k, v in d.items() if v is not None}
     try:
         st.query_params.clear()
@@ -65,7 +61,6 @@ def _set_query_params(d: dict):
         st.experimental_set_query_params(**clean)
 
 def _csv_or_parquet(path_csv: Path) -> Path:
-    # Se houver .parquet com o mesmo basename, usa-o; senão, usa CSV
     pqt = path_csv.with_suffix(".parquet")
     return pqt if pqt.exists() else path_csv
 
@@ -102,6 +97,36 @@ def _copy_link_button():
       }
     </script>
     """, height=40)
+
+def _toast(msg: str):
+    try:
+        st.toast(msg)
+    except Exception:
+        st.info(msg)
+
+def _complexity_uplift_stats(df_interacao):
+    """Retorna (media_complexos, media_simples, uplift) em pontos (diferença absoluta)."""
+    try:
+        m_c = df_interacao[df_interacao["complex"] == "Possui Ativos Complexos"]["diversificacao_media"].mean()
+        m_s = df_interacao[df_interacao["complex"] == "Apenas Ativos Simples"]["diversificacao_media"].mean()
+        return m_c, m_s, (m_c - m_s)
+    except Exception:
+        return None, None, None
+
+def _wealth_insulation_stats(df_filtros):
+    """
+    Mede a 'dispersão regional' da diversificação por faixa de renda.
+    Retorna (faixa_baixa, faixa_alta, disp_baixa, disp_alta, gap = baixa - alta).
+    """
+    try:
+        faixas_ord = df_filtros.groupby("faixa_renda", dropna=True)["renda_media"].mean().sort_values()
+        faixa_baixa = faixas_ord.index[0]
+        faixa_alta = faixas_ord.index[-1]
+        disp_baixa = df_filtros[df_filtros["faixa_renda"] == faixa_baixa].groupby("regiao")["diversificacao_media"].mean().std()
+        disp_alta  = df_filtros[df_filtros["faixa_renda"] == faixa_alta ].groupby("regiao")["diversificacao_media"].mean().std()
+        return faixa_baixa, faixa_alta, float(disp_baixa), float(disp_alta), float(disp_baixa - disp_alta)
+    except Exception:
+        return None, None, None, None, None
 
 # =========================
 # CARREGAMENTO (CACHE)
@@ -153,6 +178,22 @@ _injected_css = """
 .card { border:1px solid #eee; border-radius:14px; padding:14px; }
 </style>
 """
+# CSS dos destaques dos achados
+_injected_css += """
+<style>
+.feature {
+  display:flex; flex-direction:column; gap:8px;
+  border:1px solid #e6e9ff; border-radius:16px; padding:16px;
+  background:linear-gradient(180deg,#ffffff,#f7f9ff);
+}
+.feature h3 { margin:0 0 4px 0; }
+.feature .tag   { display:inline-block; font-size:.78rem; padding:4px 8px; border-radius:999px; background:#eef2ff; border:1px solid #dfe5ff; }
+.feature .lead  { font-size:.98rem; }
+.feature .num   { font-weight:700; }
+.feature .cta   { display:inline-block; padding:6px 10px; border:1px solid #dfe5ff; border-radius:10px; background:#fff; }
+</style>
+"""
+
 st.markdown(_injected_css, unsafe_allow_html=True)
 _inject_analytics()
 
@@ -182,14 +223,13 @@ opcoes_renda = sorted(pd.Series(df_filtros["faixa_renda"].dropna().unique(), dty
 opcoes_perfil = sorted(pd.Series(df_perfil["perfil_grupo"].dropna().unique(), dtype="object").tolist())
 opcoes_ocupacao = sorted(pd.Series(df_ocupacao["grupo_ocupacao"].dropna().unique(), dtype="object").tolist())
 
-# Lê query params (se existirem) para setar defaults
+# Lê query params para defaults
 qp = _get_query_params()
 def _parse_list(key, all_options):
     val = qp.get(key)
-    if not val:  # default = todas
+    if not val:
         return all_options
     items = [v for v in str(val).split(",") if v]
-    # mantém apenas itens válidos
     return [v for v in items if v in all_options] or all_options
 
 regioes_selecionadas = st.sidebar.multiselect("Selecione a(s) Região(ões)", options=opcoes_regiao, default=_parse_list("regiao", opcoes_regiao))
@@ -200,7 +240,7 @@ st.sidebar.subheader("Filtros Adicionais")
 perfis_selecionados = st.sidebar.multiselect("Selecione o(s) Perfil(is) de Investidor", options=opcoes_perfil, default=_parse_list("perfil", opcoes_perfil))
 ocupacoes_selecionadas = st.sidebar.multiselect("Selecione o(s) Grupo(s) de Ocupação", options=opcoes_ocupacao, default=_parse_list("ocup", opcoes_ocupacao))
 
-# Atualiza query params sempre que filtros mudarem
+# Atualiza query params
 _set_query_params({
     "regiao": regioes_selecionadas,
     "renda": faixas_renda_selecionadas,
@@ -231,7 +271,7 @@ df_temporal_filtrado = df_temporal[df_temporal["regiao"].isin(regioes_selecionad
 df_perfil_filtrado = df_perfil[df_perfil["perfil_grupo"].isin(perfis_selecionados)]
 df_ocupacao_filtrada = df_ocupacao[df_ocupacao["grupo_ocupacao"].isin(ocupacoes_selecionadas)]
 
-# KPIs curtos para hero
+# KPIs curtos da seleção
 diver_med = df_kpis_filtrado["diversificacao_media"].mean() if not df_kpis_filtrado.empty else float("nan")
 renda_med = df_kpis_filtrado["renda_media"].mean() if not df_kpis_filtrado.empty else float("nan")
 complex_med = df_kpis_filtrado["proporcao_complex"].mean() if not df_kpis_filtrado.empty else float("nan")
@@ -245,52 +285,88 @@ home, tab1, tab2, tab3, tab4, tab5, tab6, tabImp, tab7 = st.tabs([
     "🧭 Implicações", "📜 Dissertação e Materiais"
 ])
 
-# -------------------- HOME --------------------
+# -------------------- HOME (com destaque dos achados) --------------------
 with home:
-    st.markdown("### Uma história sobre **complexidade** e **contexto**")
-    with st.container():
-        colA, colB, colC = st.columns(3)
-        with colA:
-            st.markdown("#### Achado 1")
+    # Estatísticas para os achados
+    m_c, m_s, uplift = _complexity_uplift_stats(df_interacao)
+    faixa_baixa, faixa_alta, disp_baixa, disp_alta, gap_disp = _wealth_insulation_stats(df_filtros)
+
+    def _pp(x):
+        return f"{x*100:.1f} p.p." if x is not None and pd.notnull(x) else "—"
+    def _pct(x):
+        return f"{x:.2%}" if x is not None and pd.notnull(x) else "—"
+    def _num(x):
+        return f"{x:.2f}" if x is not None and pd.notnull(x) else "—"
+
+    st.markdown("### Dois achados que mudam a conversa")
+
+    colL, colR = st.columns(2)
+    with colL:
+        st.markdown("<div class='feature'>", unsafe_allow_html=True)
+        st.markdown("<span class='tag'>🧩 Paradoxo da Complexidade</span>", unsafe_allow_html=True)
+        st.markdown("<h3>Menos barreira cognitiva → mais diversificação</h3>", unsafe_allow_html=True)
+        st.markdown(
+            f"<div class='lead'>Carteiras com <b>ativos complexos</b> exibem diversificação média de "
+            f"<span class='num'>{_pct(m_c)}</span> vs. <span class='num'>{_pct(m_s)}</span> nas carteiras só de ativos simples. "
+            f"Uplift: <span class='num'>{_pp(uplift)}</span>.</div>",
+            unsafe_allow_html=True
+        )
+        if st.button("Explorar: Renda vs. Complexidade", key="cta_complex"):
+            _toast("Abra a aba 💡 Renda vs. Complexidade para ver a composição por faixas.")
+        with st.expander("Por que isso importa?"):
             st.markdown(
-                "<div class='card'><b>Complexidade percebida derruba a diversificação</b>.<br>"
-                "Reduzir o custo mental (linguagem simples, onboarding guiado) aumenta a adoção de classes e a diversificação.</div>",
+                "- Mostra que **didática e onboarding** reduzem a barreira mental.\n"
+                "- Educação segmentada e produtos 'degustação' aceleram a adoção da **2ª/3ª classe**."
+            )
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with colR:
+        st.markdown("<div class='feature'>", unsafe_allow_html=True)
+        st.markdown("<span class='tag'>💎 Efeito Isolamento da Riqueza</span>", unsafe_allow_html=True)
+        st.markdown("<h3>Em alta renda, o contexto local pesa menos</h3>", unsafe_allow_html=True)
+        if all(v is not None for v in [faixa_baixa, faixa_alta, disp_baixa, disp_alta, gap_disp]):
+            st.markdown(
+                f"<div class='lead'>A <b>dispersão regional</b> da diversificação cai de "
+                f"<span class='num'>{_num(disp_baixa)}</span> em <b>{faixa_baixa}</b> para "
+                f"<span class='num'>{_num(disp_alta)}</span> em <b>{faixa_alta}</b> "
+                f"(Δ <span class='num'>{_num(gap_disp)}</span>).</div>",
                 unsafe_allow_html=True
             )
-        with colB:
-            st.markdown("#### Achado 2")
+        else:
             st.markdown(
-                "<div class='card'><b>Estabilidade da renda regional → mais diversificação</b>.<br>"
-                "Contextos com menor volatilidade de renda tendem a carteiras mais diversificadas.</div>",
+                "<div class='lead'>Em faixas de alta renda, a diferença entre regiões diminui — sinal de que "
+                "o <b>IDH/ambiente local</b> tem impacto menor na composição da carteira.</div>",
                 unsafe_allow_html=True
             )
-        with colC:
-            st.markdown("#### Achado 3")
+        if st.button("Explorar: Temporal/Regional", key="cta_wealth"):
+            _toast("Abra as abas 📈 Análise Temporal e 🌍 Geográfica e compare regiões/tempo.")
+        with st.expander("Por que isso importa?"):
             st.markdown(
-                "<div class='card'><b>Alta renda: IDH local pesa menos</b>.<br>"
-                "Efeito de 'isolamento da riqueza' suaviza o impacto do contexto local na composição da carteira.</div>",
-                unsafe_allow_html=True
+                "- Estratégia **por contexto**: regiões menos estáveis → simplicidade e liquidez; estáveis → escada de complexidade.\n"
+                "- Em **alta renda**, foque na curadoria e eficiência fiscal (o contexto pesa menos)."
             )
+        st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("---")
+
+    # KPIs da seleção atual
     st.markdown("### KPIs da seleção atual")
     c1, c2, c3 = st.columns(3)
     c1.metric("Diversificação Média", f"{diver_med:.2%}" if pd.notnull(diver_med) else "—")
     c2.metric("Renda Média", f"R$ {renda_med:,.2f}" if pd.notnull(renda_med) else "—")
     c3.metric("Com ativos complexos", f"{complex_med:.2%}" if pd.notnull(complex_med) else "—")
-    st.markdown("<p class='kpi'>*Estes valores obedecem aos filtros ativos acima.</p>", unsafe_allow_html=True)
+    st.markdown("<p class='kpi'>*Os KPIs acima respeitam os filtros ativos.</p>", unsafe_allow_html=True)
 
     with st.expander("ℹ️ Método e glossário (resumo)"):
         st.markdown(
             "- **População/Período:** Investidores BB (2021–2024), dados agregados por privacidade.\n"
             "- **Diversificação:** proporção de classes não-correlacionadas na carteira.\n"
-            "- **Complexidade:** presença/ausência de produtos tidos como complexos (ex.: multimercados, exterior, alternativos), "
-            "usada como proxy de barreira cognitiva.\n"
-            "- **Skew de renda (proxy de estabilidade):** medida de assimetria que capta menor probabilidade de quedas extremas.\n"
-            "- **H1–H3:** (i) complexidade↑ → diversificação↑; (ii) estabilidade de renda↑ → diversificação↑; "
-            "(iii) em alta renda, IDH local ≈ não significativo."
+            "- **Complexidade:** presença de produtos tidos como complexos (proxy de barreira cognitiva).\n"
+            "- **Skew de renda:** assimetria (menor cauda de quedas = maior estabilidade).\n"
+            "- **H1–H3:** (i) complexidade↑ → diversificação↑; (ii) estabilidade de renda↑ → diversificação↑; (iii) em alta renda, IDH local ≈ menos relevante."
         )
-    st.info("Dica: navegue pelas abas para explorar cada achado com os filtros do seu interesse. Use “Copiar link” para compartilhar exatamente esta visão.")
+
+    st.info("Use “Copiar link” (no topo) para compartilhar esta visão com filtros aplicados.")
 
 # -------------------- ABA 1 --------------------
 with tab1:
