@@ -217,21 +217,25 @@ if all(df is not None for df in [df_filtros, df_mapa, df_dist, df_temporal, df_p
         st.plotly_chart(fig_composicao, use_container_width=True)
 
     with tab7:
-        st.header("Dissertação e Materiais de Apoio")
-        st.markdown("Acesse aqui o trabalho completo, o podcast explicativo e os scripts de análise.")
-        
         diretorio_script = Path(__file__).parent
         caminho_materiais = diretorio_script / "materiais"
+        
+        st.header("Dissertação e Materiais de Apoio")
+        st.markdown("Acesse aqui o trabalho completo, o podcast explicativo e os scripts de análise.")
+        arquivo_pdf_path = caminho_materiais / "DISSERTAÇÃO_Vinicios.pdf"
         
         st.subheader("Leia a Dissertação Completa")
         arquivo_pdf_path = caminho_materiais / "DISSERTAÇÃO_Vinicios.pdf"
         try:
-            with open(arquivo_pdf_path, "rb") as f:
-                base64_pdf = base64.b64encode(f.read()).decode('utf-8')
-            pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="800" type="application/pdf"></iframe>'
-            st.markdown(pdf_display, unsafe_allow_html=True)
+            with open(arquivo_pdf_path, "rb") as pdf_file:
+                PDFbyte = pdf_file.read()
+            st.download_button(label="⬇️ Baixar o PDF da Dissertação", data=PDFbyte, file_name="DISSERTAÇÃO_Vinicios.pdf", mime='application/octet-stream')
+            with st.expander("📖 Abrir leitor de PDF online (pode não ser compatível com todos os navegadores)"):
+                base64_pdf = base64.b64encode(PDFbyte).decode('utf-8')
+                pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="800" type="application/pdf"></iframe>'
+                st.markdown(pdf_display, unsafe_allow_html=True)
         except FileNotFoundError:
-            st.error(f"ERRO: Arquivo da dissertação ('{arquivo_pdf_path.name}') não encontrado.")
+            st.error(f"ERRO: Arquivo da dissertação não encontrado.")
 
         st.markdown("---")
         st.subheader("Podcast: A Pesquisa em 15 Minutos")
