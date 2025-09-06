@@ -98,6 +98,18 @@ def _copy_link_button():
     </script>
     """, height=40)
 
+def _order_income_bands(df_filtros: pd.DataFrame) -> list[str]:
+    """
+    Ordena as faixas de renda por renda média (asc), para gráficos ficarem “crescentes”.
+    Fallback: ordem alfabética.
+    """
+    try:
+        s = df_filtros.groupby("faixa_renda", dropna=True)["renda_media"].mean().sort_values()
+        return list(s.index)
+    except Exception:
+        vals = pd.Series(df_filtros["faixa_renda"].dropna().unique(), dtype="object").tolist()
+        return sorted(vals)
+
 def _toast(msg: str):
     try:
         st.toast(msg)
@@ -279,10 +291,10 @@ complex_med = df_kpis_filtrado["proporcao_complex"].mean() if not df_kpis_filtra
 # =========================
 # ABAS (inclui Home e Implicações)
 # =========================
-home, tab1, tab2, tab3, tab4, tab5, tab6, tabImp, tab7 = st.tabs([
+home, tab1, tab2, tab3, tab4, tab5, tab6, tabImp, tabNotas, tab7 = st.tabs([
     "🏠 Início (História)", "📊 Visão Geral", "🌍 Análise Geográfica", "📈 Análise Temporal",
     "👤 Análise por Perfil", "💼 Análise por Ocupação", "💡 Renda vs. Complexidade",
-    "🧭 Implicações", "📜 Dissertação e Materiais"
+    "🧭 Implicações", "🧪 Notas de Pesquisa", "📜 Dissertação e Materiais"
 ])
 
 # -------------------- HOME (com destaque dos achados) --------------------
@@ -619,3 +631,106 @@ with tab7:
         )
     except FileNotFoundError:
         st.error(f"ERRO: Arquivo do Stata ('{arquivo_do_path.name}') não encontrado.")
+
+# -------------------- ABA NOTAS DE PESQUISA --------------------
+with tabNotas:
+    st.header("Notas de Pesquisa")
+    st.caption("Mini-explicações dos dois achados com base nos dados agregados do app.")
+
+    # ---------- 3.1 Paradoxo da Complexidade: efeito por faixa de renda ----------
+    st.subheader("Paradoxo da Complexidade — interação com renda")
+    order_bands = _order_income_bands(df_filtros)
+
+    # Médias de diversificação por faixa x (complexo vs simples)
+    df_means = (df_interacao.groupby(["faixa_renda","complex"])["diversificacao_media"]
+                .mean().reset_index())
+
+    # Nomes amigáveis
+    mapa_tipo = {
+        "Possui Ativos Complexos": "Com complexos",
+        "Apenas Ativos Simples": "Só simples",
+    }
+    df_means["tipo"] = df_means["complex"].map(mapa_tipo)
+
+    fig_int = px.line(
+        df_means,
+        x="faixa_renda", y="diversificacao_media", color="tipo", markers=True,
+        category_orders={"faixa_renda": order_bands},
+        labels={"faixa_renda": "Faixa de renda", "diversificacao_media": "Diversificação média", "tipo": ""},
+        title="Diversificação média por faixa de renda — com e sem ativos complexos"
+    )
+    st.plotly_chart(fig_int, use_container_width=True)
+
+    # Uplift por faixa (proxy do efeito marginal observado)
+    piv = df_means.pivot(index="faixa_renda", columns="tipo", values="diversificacao_media")
+    for col in ["Com complexos", "Só simples"]:
+        if col not in piv.columns:
+            piv[col] = pd.NA
+    piv = piv.reset_index()
+    piv["uplift_pp"] = (piv["Com complexos"] - piv["Só simples"]) * 100  # p.p.
+
+    fig_uplift = px.bar(
+        piv, x="faixa_renda", y="uplift_pp",
+        category_orders={"faixa_renda": order_bands},
+        labels={"faixa_renda": "Faixa de renda", "uplift_pp": "Uplift de diversificação (p.p.)"},
+        title="Uplift observado ao incluir ativos complexos (por faixa de renda)",
+        text_auto=".1f"
+    )
+    st.plotly_chart(fig_uplift, use_container_width=True)
+
+    with st.expander("Como ler / por que importa"):
+        st.markdown(
+            "- As linhas mostram a **diferença de nível** (com vs. sem complexos) ao longo da renda.\n"
+            "- As barras mostram o **uplift observado** em pontos percentuais para cada faixa.\n"
+            "- **Interpretação**: reduzir a barreira cognitiva (onboarding didático, jargão simples) tende a elevar a diversificação, "
+            "especialmente nas faixas mais baixas."
+        )
+
+    # ---------- 3.2 Efeito Isolamento da Riqueza: dispersão regional vs renda ----------
+    st.subheader("Efeito Isolamento da Riqueza — dispersão regional cai na alta renda")
+
+    # Dispersão regional da diversificação por faixa (σ entre regiões)
+    rows = []
+    for faixa in order_bands:
+        g = (df_filtros[df_filtros["faixa_renda"] == faixa]
+             .groupby("regiao")["diversificacao_media"].mean())
+        if len(g) > 1:
+            rows.append({"faixa_renda": faixa, "disp_regional": float(g.std())})
+    df_disp = pd.DataFrame(rows)
+
+    if not df_disp.empty:
+        fig_disp = px.line(
+            df_disp, x="faixa_renda", y="disp_regional", markers=True,
+            category_orders={"faixa_renda": order_bands},
+            labels={"faixa_renda": "Faixa de renda", "disp_regional": "Dispersão regional (σ)"},
+            title="Dispersão da diversificação entre regiões por faixa de renda"
+        )
+        st.plotly_chart(fig_disp, use_container_width=True)
+    else:
+        st.info("Sem variação regional suficiente por faixa de renda para estimar a dispersão.")
+
+    with st.expander("Como ler / por que importa"):
+        st.markdown(
+            "- **Quanto menor a dispersão (σ)**, **menos** a região 'explica' a composição da carteira.\n"
+            "- Em **alta renda**, a dispersão entre regiões tende a cair ⇒ **contexto local pesa menos** (isolamento da riqueza).\n"
+            "- Implicação prática: estratégia comercial e educacional **por nível de renda** (contexto importa mais nas faixas baixas e médias)."
+        )
+
+    # ---------- 3.3 Observações metodológicas ----------
+    st.subheader("Observações metodológicas")
+    with st.expander("Resumo"):
+        st.markdown(
+            "- Os gráficos acima são **descritivos** com base em dados **pré-agregados** do app.\n"
+            "- O uplift por faixa é uma **proxy observacional** do efeito marginal de complexidade; a dissertação usa especificações "
+            "com interação e controles.\n"
+            "- Para detalhes (modelos, robustez e limitações), consulte a **Dissertação** na aba “📜 Dissertação e Materiais”."
+        )
+
+    colA, colB = st.columns(2)
+    with colA:
+        if st.button("Ir para 💡 Renda vs. Complexidade"):
+            _toast("Aba 💡 Renda vs. Complexidade aberta na parte superior.")
+    with colB:
+        if st.button("Ir para 📈 Análise Temporal / 🌍 Geográfica"):
+            _toast("Use as abas 📈 e 🌍 para comparar tendências e regiões.")
+
