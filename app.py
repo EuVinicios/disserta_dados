@@ -616,116 +616,116 @@ with tabNotas:
     st.caption("Mini-explicações dos dois achados com base nos dados agregados do app.")
 
 # ---------- 3.1 Paradoxo da Complexidade: efeito por faixa de renda ----------
-st.subheader("Paradoxo da Complexidade — interação com renda")
-order_bands = _order_income_bands(df_filtros)
+    st.subheader("Paradoxo da Complexidade — interação com renda")
+    order_bands = _order_income_bands(df_filtros)
 
-# >>> NOVO: usa o agregado por quantis, com fallback para a versão antiga por faixas
-from pathlib import Path
-caminho_app_data = Path(__file__).parent / "app_data"
-arq_quantis = caminho_app_data / "interacao_renda_complex_quantis.csv"
+    # >>> NOVO: usa o agregado por quantis, com fallback para a versão antiga por faixas
+    from pathlib import Path
+    caminho_app_data = Path(__file__).parent / "app_data"
+    arq_quantis = caminho_app_data / "interacao_renda_complex_quantis.csv"
 
-if arq_quantis.exists():
-    # ===== NOVA VISUALIZAÇÃO (QUANTIS) =====
-    df_q = pd.read_csv(arq_quantis)
+    if arq_quantis.exists():
+        # ===== NOVA VISUALIZAÇÃO (QUANTIS) =====
+        df_q = pd.read_csv(arq_quantis)
 
-    ord_quantis = ['Q1 (↓ renda)', 'Q2', 'Q3', 'Q4', 'Q5 (↑ renda)']
-    if 'renda_quantil' in df_q.columns:
-        df_q['renda_quantil'] = pd.Categorical(
-            df_q['renda_quantil'], categories=ord_quantis, ordered=True
+        ord_quantis = ['Q1 (↓ renda)', 'Q2', 'Q3', 'Q4', 'Q5 (↑ renda)']
+        if 'renda_quantil' in df_q.columns:
+            df_q['renda_quantil'] = pd.Categorical(
+                df_q['renda_quantil'], categories=ord_quantis, ordered=True
+            )
+            df_q = df_q.sort_values(['renda_quantil', 'complex'])
+
+        # (A) Slope chart: Simples vs Complexos por quantil de renda
+        fig_slope = px.line(
+            df_q, x="renda_quantil", y="diversificacao_media", color="complex",
+            markers=True,
+            labels={
+                "renda_quantil": "Quantil de renda",
+                "diversificacao_media": "Diversificação média",
+                "complex": ""
+            },
+            title="Diversificação média por quantil — com e sem ativos complexos",
+            hover_data={"total_clientes": True}
         )
-        df_q = df_q.sort_values(['renda_quantil', 'complex'])
+        fig_slope.update_layout(yaxis=dict(tickformat=".0%"), margin=dict(l=10, r=10, t=60, b=10))
+        st.plotly_chart(fig_slope, use_container_width=True)
 
-    # (A) Slope chart: Simples vs Complexos por quantil de renda
-    fig_slope = px.line(
-        df_q, x="renda_quantil", y="diversificacao_media", color="complex",
-        markers=True,
-        labels={
-            "renda_quantil": "Quantil de renda",
-            "diversificacao_media": "Diversificação média",
-            "complex": ""
-        },
-        title="Diversificação média por quantil — com e sem ativos complexos",
-        hover_data={"total_clientes": True}
-    )
-    fig_slope.update_layout(yaxis=dict(tickformat=".0%"), margin=dict(l=10, r=10, t=60, b=10))
-    st.plotly_chart(fig_slope, use_container_width=True)
-
-    # (B) Uplift (p.p.) = Complexos – Simples (por quantil de renda)
-    piv_q = (
-        df_q.pivot_table(index="renda_quantil", columns="complex", values="diversificacao_media")
-            .reindex(ord_quantis)
-    )
-    if {"Possui Ativos Complexos", "Apenas Ativos Simples"}.issubset(set(piv_q.columns)):
-        df_uplift_q = (
-            (piv_q["Possui Ativos Complexos"] - piv_q["Apenas Ativos Simples"]) * 100
-        ).rename("uplift_pp").reset_index()
-
-        fig_uplift_q = px.line(
-            df_uplift_q, x="renda_quantil", y="uplift_pp", markers=True,
-            labels={"renda_quantil":"Quantil de renda", "uplift_pp":"Ganho ao incluir complexos (p.p.)"},
-            title="Ganho observado ao incluir ativos complexos (p.p.) por quantil de renda"
+        # (B) Uplift (p.p.) = Complexos – Simples (por quantil de renda)
+        piv_q = (
+            df_q.pivot_table(index="renda_quantil", columns="complex", values="diversificacao_media")
+                .reindex(ord_quantis)
         )
-        st.plotly_chart(fig_uplift_q, use_container_width=True)
+        if {"Possui Ativos Complexos", "Apenas Ativos Simples"}.issubset(set(piv_q.columns)):
+            df_uplift_q = (
+                (piv_q["Possui Ativos Complexos"] - piv_q["Apenas Ativos Simples"]) * 100
+            ).rename("uplift_pp").reset_index()
 
-    st.caption(
-        "Nota: 'Apenas Ativos Simples' tem diversificação = 0% por construção; "
-        "o *uplift* representa o ganho médio ao incluir ativos complexos em cada estrato de renda."
-    )
+            fig_uplift_q = px.line(
+                df_uplift_q, x="renda_quantil", y="uplift_pp", markers=True,
+                labels={"renda_quantil":"Quantil de renda", "uplift_pp":"Ganho ao incluir complexos (p.p.)"},
+                title="Ganho observado ao incluir ativos complexos (p.p.) por quantil de renda"
+            )
+            st.plotly_chart(fig_uplift_q, use_container_width=True)
 
-    with st.expander("Como ler / por que importa (complexidade)"):
-        st.markdown(
-            "- **Linhas com marcadores:** comparam **lado a lado** (Com complexos vs. Só simples) em cada **quantil** de renda.\n"
-            "- **Uplift (p.p.):** quanto a diversificação **sobe** ao incluir complexos. "
-            "A tendência é **cair** nos quantis de renda mais altos → consistente com o efeito moderador da renda."
+        st.caption(
+            "Nota: 'Apenas Ativos Simples' tem diversificação = 0% por construção; "
+            "o *uplift* representa o ganho médio ao incluir ativos complexos em cada estrato de renda."
         )
 
-else:
-    # ===== FALLBACK: mantém sua versão anterior por FAIXAS =====
-    df_int = df_interacao.copy()
-    if "total_clientes" not in df_int.columns:
-        df_int["total_clientes"] = 1
+        with st.expander("Como ler / por que importa (complexidade)"):
+            st.markdown(
+                "- **Linhas com marcadores:** comparam **lado a lado** (Com complexos vs. Só simples) em cada **quantil** de renda.\n"
+                "- **Uplift (p.p.):** quanto a diversificação **sobe** ao incluir complexos. "
+                "A tendência é **cair** nos quantis de renda mais altos → consistente com o efeito moderador da renda."
+            )
 
-    # Médias por faixa x tipo + n
-    df_means = (
-        df_int.groupby(["faixa_renda", "complex"], dropna=True)
-              .agg(diversificacao_media=("diversificacao_media", "mean"),
-                   n=("total_clientes", "sum"))
-              .reset_index()
-    )
-    mapa_tipo = {"Possui Ativos Complexos": "Com complexos",
-                 "Apenas Ativos Simples": "Só simples"}
-    df_means["tipo"] = df_means["complex"].map(mapa_tipo)
+    else:
+        # ===== FALLBACK: mantém sua versão anterior por FAIXAS =====
+        df_int = df_interacao.copy()
+        if "total_clientes" not in df_int.columns:
+            df_int["total_clientes"] = 1
 
-    # (A) Barras agrupadas: comparação direta
-    fig_comp = px.bar(
-        df_means, x="faixa_renda", y="diversificacao_media", color="tipo",
-        barmode="group", category_orders={"faixa_renda": order_bands},
-        labels={"faixa_renda":"Faixa de renda", "diversificacao_media":"Diversificação média", "tipo":""},
-        title="Diversificação média por faixa — com e sem ativos complexos",
-        text_auto=".1%"
-    )
-    fig_comp.update_layout(yaxis=dict(tickformat=".0%"), margin=dict(l=10, r=10, t=60, b=10))
-    st.plotly_chart(fig_comp, use_container_width=True)
-
-    # (B) Uplift em p.p. (com complexos – só simples)
-    piv = df_means.pivot_table(index="faixa_renda", columns="tipo", values="diversificacao_media").reindex(order_bands)
-    uplift = (piv.get("Com complexos") - piv.get("Só simples")) * 100
-    df_uplift = uplift.rename("uplift_pp").reset_index().sort_values("uplift_pp", ascending=False)
-
-    fig_u = px.bar(
-        df_uplift, x="faixa_renda", y="uplift_pp",
-        labels={"faixa_renda":"Faixa de renda", "uplift_pp":"Uplift de diversificação (p.p.)"},
-        title="Ganho observado ao incluir ativos complexos (por faixa de renda)",
-        text_auto=".1f"
-    )
-    fig_u.update_layout(margin=dict(l=10, r=10, t=60, b=10))
-    st.plotly_chart(fig_u, use_container_width=True)
-
-    with st.expander("Como ler / por que importa (complexidade)"):
-        st.markdown(
-            "- **Barras agrupadas:** comparação direta **lado a lado** (Com complexos vs. Só simples) em cada faixa.\n"
-            "- **Uplift (p.p.):** o **quanto sobe** a diversificação ao incluir complexos."
+        # Médias por faixa x tipo + n
+        df_means = (
+            df_int.groupby(["faixa_renda", "complex"], dropna=True)
+                .agg(diversificacao_media=("diversificacao_media", "mean"),
+                    n=("total_clientes", "sum"))
+                .reset_index()
         )
+        mapa_tipo = {"Possui Ativos Complexos": "Com complexos",
+                    "Apenas Ativos Simples": "Só simples"}
+        df_means["tipo"] = df_means["complex"].map(mapa_tipo)
+
+        # (A) Barras agrupadas: comparação direta
+        fig_comp = px.bar(
+            df_means, x="faixa_renda", y="diversificacao_media", color="tipo",
+            barmode="group", category_orders={"faixa_renda": order_bands},
+            labels={"faixa_renda":"Faixa de renda", "diversificacao_media":"Diversificação média", "tipo":""},
+            title="Diversificação média por faixa — com e sem ativos complexos",
+            text_auto=".1%"
+        )
+        fig_comp.update_layout(yaxis=dict(tickformat=".0%"), margin=dict(l=10, r=10, t=60, b=10))
+        st.plotly_chart(fig_comp, use_container_width=True)
+
+        # (B) Uplift em p.p. (com complexos – só simples)
+        piv = df_means.pivot_table(index="faixa_renda", columns="tipo", values="diversificacao_media").reindex(order_bands)
+        uplift = (piv.get("Com complexos") - piv.get("Só simples")) * 100
+        df_uplift = uplift.rename("uplift_pp").reset_index().sort_values("uplift_pp", ascending=False)
+
+        fig_u = px.bar(
+            df_uplift, x="faixa_renda", y="uplift_pp",
+            labels={"faixa_renda":"Faixa de renda", "uplift_pp":"Uplift de diversificação (p.p.)"},
+            title="Ganho observado ao incluir ativos complexos (por faixa de renda)",
+            text_auto=".1f"
+        )
+        fig_u.update_layout(margin=dict(l=10, r=10, t=60, b=10))
+        st.plotly_chart(fig_u, use_container_width=True)
+
+        with st.expander("Como ler / por que importa (complexidade)"):
+            st.markdown(
+                "- **Barras agrupadas:** comparação direta **lado a lado** (Com complexos vs. Só simples) em cada faixa.\n"
+                "- **Uplift (p.p.):** o **quanto sobe** a diversificação ao incluir complexos."
+            )
 
     # ---------- 3.2 Efeito Isolamento da Riqueza: dispersão regional vs renda ----------
     st.subheader("Efeito Isolamento da Riqueza — dispersão regional cai na alta renda")
