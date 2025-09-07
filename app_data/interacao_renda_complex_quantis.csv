@@ -1,0 +1,11 @@
+renda_quantil,complex,diversificacao_media,total_clientes
+Q1 (↓ renda),Apenas Ativos Simples,0.0,22380
+Q1 (↓ renda),Possui Ativos Complexos,0.3297754288970679,21717
+Q2,Apenas Ativos Simples,0.0,23415
+Q2,Possui Ativos Complexos,0.3107477017102375,27960
+Q3,Apenas Ativos Simples,0.0,20960
+Q3,Possui Ativos Complexos,0.31633310318351926,30600
+Q4,Apenas Ativos Simples,0.0,18250
+Q4,Possui Ativos Complexos,0.32627416005738147,31245
+Q5 (↑ renda),Apenas Ativos Simples,0.0,14100
+Q5 (↑ renda),Possui Ativos Complexos,0.32825073883760086,24559

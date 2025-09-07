@@ -175,6 +175,25 @@ def main():
     agg_interacao.to_csv(PASTA_SAIDA_APP / 'interacao_renda_complex_agregado.csv', index=False)
     print(f"-> Salvo: {PASTA_SAIDA_APP / 'interacao_renda_complex_agregado.csv'}")
 
+    # --- Interação por quantis de renda (mostra o gradiente do efeito) ---
+    df_tratado['renda_quantil'] = pd.qcut(
+        df_tratado['renda'].clip(lower=0),
+        q=5, labels=['Q1 (↓ renda)', 'Q2', 'Q3', 'Q4', 'Q5 (↑ renda)']
+    )
+
+    agg_interacao_q = df_tratado.groupby(['renda_quantil', 'complex']).agg(
+        diversificacao_media=('diver', 'mean'),
+        total_clientes=('id_cliente', 'nunique')
+    ).reset_index()
+
+    agg_interacao_q['complex'] = agg_interacao_q['complex'].map({
+        0: 'Apenas Ativos Simples', 1: 'Possui Ativos Complexos'
+    })
+
+    agg_interacao_q.to_csv(PASTA_SAIDA_APP / 'interacao_renda_complex_quantis.csv', index=False)
+    print("-> Salvo: interacao_renda_complex_quantis.csv")
+
+
     # Adicione este bloco dentro da função main() do seu preparar_dados_app.py
 
     # 8. Agregado para o novo Gráfico de Barras Categórico (Visão Geral)
