@@ -589,7 +589,7 @@ with tab7:
 
     st.markdown("---")
     # Áudio
-    st.subheader("Podcast: A Pesquisa em 15 Minutos")
+    st.subheader("Podcast: A Pesquisa em 10 Minutos")
     arquivo_audio_path = caminho_materiais / "podcast_dissertacao.mp3"
     if arquivo_audio_path.exists():
         st.audio(str(arquivo_audio_path))
