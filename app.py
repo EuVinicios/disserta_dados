@@ -615,10 +615,72 @@ with tabNotas:
     st.header("Notas de Pesquisa")
     st.caption("Mini-explicações dos dois achados com base nos dados agregados do app.")
 
-    # ---------- 3.1 Paradoxo da Complexidade: efeito por faixa de renda ----------
-    st.subheader("Paradoxo da Complexidade — interação com renda")
-    order_bands = _order_income_bands(df_filtros)
+# ---------- 3.1 Paradoxo da Complexidade: efeito por faixa de renda ----------
+st.subheader("Paradoxo da Complexidade — interação com renda")
+order_bands = _order_income_bands(df_filtros)
 
+# >>> NOVO: usa o agregado por quantis, com fallback para a versão antiga por faixas
+from pathlib import Path
+caminho_app_data = Path(__file__).parent / "app_data"
+arq_quantis = caminho_app_data / "interacao_renda_complex_quantis.csv"
+
+if arq_quantis.exists():
+    # ===== NOVA VISUALIZAÇÃO (QUANTIS) =====
+    df_q = pd.read_csv(arq_quantis)
+
+    ord_quantis = ['Q1 (↓ renda)', 'Q2', 'Q3', 'Q4', 'Q5 (↑ renda)']
+    if 'renda_quantil' in df_q.columns:
+        df_q['renda_quantil'] = pd.Categorical(
+            df_q['renda_quantil'], categories=ord_quantis, ordered=True
+        )
+        df_q = df_q.sort_values(['renda_quantil', 'complex'])
+
+    # (A) Slope chart: Simples vs Complexos por quantil de renda
+    fig_slope = px.line(
+        df_q, x="renda_quantil", y="diversificacao_media", color="complex",
+        markers=True,
+        labels={
+            "renda_quantil": "Quantil de renda",
+            "diversificacao_media": "Diversificação média",
+            "complex": ""
+        },
+        title="Diversificação média por quantil — com e sem ativos complexos",
+        hover_data={"total_clientes": True}
+    )
+    fig_slope.update_layout(yaxis=dict(tickformat=".0%"), margin=dict(l=10, r=10, t=60, b=10))
+    st.plotly_chart(fig_slope, use_container_width=True)
+
+    # (B) Uplift (p.p.) = Complexos – Simples (por quantil de renda)
+    piv_q = (
+        df_q.pivot_table(index="renda_quantil", columns="complex", values="diversificacao_media")
+            .reindex(ord_quantis)
+    )
+    if {"Possui Ativos Complexos", "Apenas Ativos Simples"}.issubset(set(piv_q.columns)):
+        df_uplift_q = (
+            (piv_q["Possui Ativos Complexos"] - piv_q["Apenas Ativos Simples"]) * 100
+        ).rename("uplift_pp").reset_index()
+
+        fig_uplift_q = px.line(
+            df_uplift_q, x="renda_quantil", y="uplift_pp", markers=True,
+            labels={"renda_quantil":"Quantil de renda", "uplift_pp":"Ganho ao incluir complexos (p.p.)"},
+            title="Ganho observado ao incluir ativos complexos (p.p.) por quantil de renda"
+        )
+        st.plotly_chart(fig_uplift_q, use_container_width=True)
+
+    st.caption(
+        "Nota: 'Apenas Ativos Simples' tem diversificação = 0% por construção; "
+        "o *uplift* representa o ganho médio ao incluir ativos complexos em cada estrato de renda."
+    )
+
+    with st.expander("Como ler / por que importa (complexidade)"):
+        st.markdown(
+            "- **Linhas com marcadores:** comparam **lado a lado** (Com complexos vs. Só simples) em cada **quantil** de renda.\n"
+            "- **Uplift (p.p.):** quanto a diversificação **sobe** ao incluir complexos. "
+            "A tendência é **cair** nos quantis de renda mais altos → consistente com o efeito moderador da renda."
+        )
+
+else:
+    # ===== FALLBACK: mantém sua versão anterior por FAIXAS =====
     df_int = df_interacao.copy()
     if "total_clientes" not in df_int.columns:
         df_int["total_clientes"] = 1
@@ -662,8 +724,7 @@ with tabNotas:
     with st.expander("Como ler / por que importa (complexidade)"):
         st.markdown(
             "- **Barras agrupadas:** comparação direta **lado a lado** (Com complexos vs. Só simples) em cada faixa.\n"
-            "- **Uplift (p.p.):** o **quanto sobe** a diversificação ao incluir complexos. "
-            "Geralmente maior nas faixas **baixas/médias de renda** → alvo natural para **onboarding**."
+            "- **Uplift (p.p.):** o **quanto sobe** a diversificação ao incluir complexos."
         )
 
     # ---------- 3.2 Efeito Isolamento da Riqueza: dispersão regional vs renda ----------
