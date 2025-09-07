@@ -116,6 +116,20 @@ def _toast(msg: str):
     except Exception:
         st.info(msg)
 
+def _switch_tab(label: str):
+    """Troca para a aba cujo rótulo começa com `label` (ex.: '💡 Renda vs. Complexidade')."""
+    import json as _json
+    st.components.v1.html(f"""
+    <script>
+      const target = {_json.dumps(label)};
+      const tabs = window.parent.document.querySelectorAll('button[role="tab"]');
+      for (const t of tabs) {{
+        const txt = (t.innerText || t.textContent || '').trim();
+        if (txt.startsWith(target)) {{ t.click(); break; }}
+      }}
+    </script>
+    """, height=0)
+
 def _complexity_uplift_stats(df_interacao):
     """Retorna (media_complexos, media_simples, uplift) em pontos (diferença absoluta)."""
     try:
@@ -184,28 +198,12 @@ _injected_css = """
 .chip { display:inline-flex; align-items:center; padding:4px 10px; border-radius:999px; border:1px solid #e0e0e0; background:#fafafa; font-size:0.86rem; }
 .chip--label { background:#eef6ff; border-color:#cfe4ff; font-weight:600; }
 .chip--muted { color:#999; }
-.callout { padding:12px 14px; border:1px solid #eaeaea; border-radius:12px; background:#fcfcfc; }
 .kpi { font-size:0.95rem; color:#666; margin-top:-10px; }
 .hero { padding:14px 16px; border:1px solid #f0f0f0; border-radius:14px; background:linear-gradient(180deg,#ffffff,#fbfbff); }
 .card { border:1px solid #eee; border-radius:14px; padding:14px; }
+.tag { display:inline-block; font-size:.78rem; padding:4px 8px; border-radius:999px; background:#eef2ff; border:1px solid #dfe5ff; }
 </style>
 """
-# CSS dos destaques dos achados
-_injected_css += """
-<style>
-.feature {
-  display:flex; flex-direction:column; gap:8px;
-  border:1px solid #e6e9ff; border-radius:16px; padding:16px;
-  background:linear-gradient(180deg,#ffffff,#f7f9ff);
-}
-.feature h3 { margin:0 0 4px 0; }
-.feature .tag   { display:inline-block; font-size:.78rem; padding:4px 8px; border-radius:999px; background:#eef2ff; border:1px solid #dfe5ff; }
-.feature .lead  { font-size:.98rem; }
-.feature .num   { font-weight:700; }
-.feature .cta   { display:inline-block; padding:6px 10px; border:1px solid #dfe5ff; border-radius:10px; background:#fff; }
-</style>
-"""
-
 st.markdown(_injected_css, unsafe_allow_html=True)
 _inject_analytics()
 
@@ -307,79 +305,59 @@ with home:
         return f"{x*100:.1f} p.p." if x is not None and pd.notnull(x) else "—"
     def _pct(x):
         return f"{x:.2%}" if x is not None and pd.notnull(x) else "—"
-    def _num(x):
-        return f"{x:.2f}" if x is not None and pd.notnull(x) else "—"
 
     st.markdown("### Dois achados que mudam a conversa")
 
     colL, colR = st.columns(2)
+
     # ----------------- Paradoxo da Complexidade -----------------
     with colL:
-        st.markdown("<div class='feature'>", unsafe_allow_html=True)
-        st.markdown("<span class='tag'>🧩 Paradoxo da Complexidade</span>", unsafe_allow_html=True)
-        st.markdown("<h3>Menos barreira cognitiva → mais diversificação</h3>", unsafe_allow_html=True)
-        st.markdown(
-            f"<div class='lead'>Carteiras com <b>ativos complexos</b> exibem diversificação média de "
-            f"<span class='num'>{_pct(m_c)}</span> vs. <span class='num'>{_pct(m_s)}</span> nas carteiras só de ativos simples. "
-            f"Uplift: <span class='num'>{_pp(uplift)}</span>.</div>",
-            unsafe_allow_html=True
-        )
-        if st.button("Explorar: Renda vs. Complexidade", key="cta_complex"):
-            _toast("Abra a aba 💡 Renda vs. Complexidade para ver a composição por faixas.")
-        with st.expander("Por que isso importa?"):
+        with st.container(border=True):
+            st.markdown("<span class='tag'>🧩 Paradoxo da Complexidade</span>", unsafe_allow_html=True)
+            st.markdown("### Menos barreira cognitiva → mais diversificação")
             st.markdown(
-                "- **Didática e onboarding** reduzem a barreira mental e aceleram a adoção da 2ª/3ª classe.\n"
-                "- Gera **diversificação prática** especialmente entre investidores de renda mais baixa."
+                f"Carteiras com **ativos complexos**: **{_pct(m_c)}** vs. **{_pct(m_s)}** só com ativos simples. "
+                f"**Uplift:** **{_pp(uplift)}**."
             )
-        # >>> NOVO: Mais detalhes (da dissertação)
-        with st.expander("Mais detalhes (da dissertação)"):
-            st.markdown(
-                "- A dissertação mostra que o efeito da **complexidade** sobre a diversificação **depende da renda** "
-                "(termo de interação significativo): o ganho é **maior** para rendas mais baixas, e **se atenua** nas rendas mais altas.\n"
-                "- Interpretação: quem tem renda mais baixa usa produtos “complexos” como **porta de entrada para diversificar**; "
-                "já rendas muito altas podem usar complexos para **apostas concentradas** (tipo-loteria), o que não amplia a diversificação.\n"
-                "- Base teórica: **preferência por simplicidade** — escolhas com muitos componentes têm custo cognitivo, reduzindo a atratividade "
-                "mesmo quando o retorno esperado é maior (logo, **reduzir a complexidade percebida** aumenta a adoção)."
-            )
-        st.markdown("</div>", unsafe_allow_html=True)
+            if st.button("Explorar: Renda vs. Complexidade", key="cta_complex"):
+                _switch_tab("💡 Renda vs. Complexidade")
+            with st.expander("Por que isso importa?"):
+                st.markdown(
+                    "- **Didática e onboarding** reduzem a barreira mental e aceleram a adoção da 2ª/3ª classe.\n"
+                    "- Gera **diversificação prática** especialmente entre investidores de renda mais baixa."
+                )
+            with st.expander("Mais detalhes (da dissertação)"):
+                st.markdown(
+                    "- O efeito da **complexidade** na diversificação **varia com a renda** (interação significativa): "
+                    "maior ganho em **rendas baixas**, atenuado nas **rendas altas**.\n"
+                    "- Em renda baixa, produtos “complexos” servem de **porta de entrada**; em renda alta, podem virar **apostas concentradas**.\n"
+                    "- Base teórica: **preferência por simplicidade** (custo cognitivo)."
+                )
 
     # ----------------- Efeito Isolamento da Riqueza -----------------
     with colR:
-        st.markdown("<div class='feature'>", unsafe_allow_html=True)
-        st.markdown("<span class='tag'>💎 Efeito Isolamento da Riqueza</span>", unsafe_allow_html=True)
-        st.markdown("<h3>Em alta renda, o contexto local pesa menos</h3>", unsafe_allow_html=True)
-        if all(v is not None for v in [faixa_baixa, faixa_alta, disp_baixa, disp_alta, gap_disp]):
-            st.markdown(
-                f"<div class='lead'>A <b>dispersão regional</b> da diversificação cai de "
-                f"<span class='num'>{_num(disp_baixa)}</span> em <b>{faixa_baixa}</b> para "
-                f"<span class='num'>{_num(disp_alta)}</span> em <b>{faixa_alta}</b> "
-                f"(Δ <span class='num'>{_num(gap_disp)}</span>).</div>",
-                unsafe_allow_html=True
-            )
-        else:
-            st.markdown(
-                "<div class='lead'>Em faixas de alta renda, a diferença entre regiões diminui — sinal de que "
-                "o <b>IDH/ambiente local</b> tem impacto menor na composição da carteira.</div>",
-                unsafe_allow_html=True
-            )
-        if st.button("Explorar: Temporal/Regional", key="cta_wealth"):
-            _toast("Abra as abas 📈 Análise Temporal e 🌍 Geográfica e compare regiões/tempo.")
-        with st.expander("Por que isso importa?"):
-            st.markdown(
-                "- **Estratégia por contexto**: regiões menos estáveis → simplicidade e liquidez; estáveis → escada de complexidade.\n"
-                "- Em **alta renda**, foque em curadoria, eficiência fiscal e objetivos — o contexto local pesa menos."
-            )
-        # >>> NOVO: Mais detalhes (da dissertação)
-        with st.expander("Mais detalhes (da dissertação)"):
-            st.markdown(
-                "- A hipótese de que o **IDH** impactaria a diversificação **não se sustenta** entre **alta renda** "
-                "(coeficiente do IDH **insignificante** na subamostra de alta renda).\n"
-                "- Interpretação central: a **riqueza funciona como isolante** — acesso a assessoria qualificada, "
-                "fontes nacionais/globais de informação e plataformas ampliam horizontes além do município de residência.\n"
-                "- Implicações: políticas e ações comerciais devem diferenciar intervenções por **nível de renda**; "
-                "para alta renda, o contexto local explica menos do comportamento de carteira."
-            )
-        st.markdown("</div>", unsafe_allow_html=True)
+        with st.container(border=True):
+            st.markdown("<span class='tag'>💎 Efeito Isolamento da Riqueza</span>", unsafe_allow_html=True)
+            st.markdown("### Em alta renda, o contexto local pesa menos")
+            if all(v is not None for v in [faixa_baixa, faixa_alta, disp_baixa, disp_alta, gap_disp]):
+                st.markdown(
+                    f"**Dispersão regional** da diversificação cai de **{disp_baixa:.2f}** ({faixa_baixa}) "
+                    f"para **{disp_alta:.2f}** ({faixa_alta}). Δ = **{gap_disp:.2f}**."
+                )
+            else:
+                st.markdown("Em **alta renda**, a diferença entre regiões diminui — o **IDH local** explica menos a carteira.")
+            if st.button("Explorar: Geografia", key="cta_wealth"):
+                _switch_tab("🌍 Análise Geográfica")
+            with st.expander("Por que isso importa?"):
+                st.markdown(
+                    "- **Estratégia por contexto**: regiões menos estáveis → simplicidade e liquidez; estáveis → escada de complexidade.\n"
+                    "- Em **alta renda**, foque em curadoria, eficiência fiscal e objetivos — o contexto local pesa menos."
+                )
+            with st.expander("Mais detalhes (da dissertação)"):
+                st.markdown(
+                    "- Entre **alta renda**, o coeficiente do **IDH** fica **insignificante** → a riqueza atua como **isolante** "
+                    "(assessoria, informação e plataformas ampliam o horizonte além do município)."
+                )
 
     st.markdown("---")
 
@@ -631,6 +609,7 @@ with tab7:
         )
     except FileNotFoundError:
         st.error(f"ERRO: Arquivo do Stata ('{arquivo_do_path.name}') não encontrado.")
+
 # -------------------- ABA NOTAS DE PESQUISA --------------------
 with tabNotas:
     st.header("Notas de Pesquisa")
@@ -640,95 +619,51 @@ with tabNotas:
     st.subheader("Paradoxo da Complexidade — interação com renda")
     order_bands = _order_income_bands(df_filtros)
 
-    # Garantia de coluna n (caso seu df não tenha total_clientes)
     df_int = df_interacao.copy()
     if "total_clientes" not in df_int.columns:
         df_int["total_clientes"] = 1
 
-    # Médias e tamanhos por faixa x (complexo vs simples)
+    # Médias por faixa x tipo + n
     df_means = (
         df_int.groupby(["faixa_renda", "complex"], dropna=True)
               .agg(diversificacao_media=("diversificacao_media", "mean"),
                    n=("total_clientes", "sum"))
               .reset_index()
     )
-
-    mapa_tipo = {
-        "Possui Ativos Complexos": "Com complexos",
-        "Apenas Ativos Simples": "Só simples",
-    }
+    mapa_tipo = {"Possui Ativos Complexos": "Com complexos",
+                 "Apenas Ativos Simples": "Só simples"}
     df_means["tipo"] = df_means["complex"].map(mapa_tipo)
 
-    # Tabela larga para comparar lado a lado
-    piv = (
-        df_means.pivot_table(index="faixa_renda", columns="tipo", values="diversificacao_media")
-               .reindex(order_bands)
+    # (A) Barras agrupadas: comparação direta
+    fig_comp = px.bar(
+        df_means, x="faixa_renda", y="diversificacao_media", color="tipo",
+        barmode="group", category_orders={"faixa_renda": order_bands},
+        labels={"faixa_renda":"Faixa de renda", "diversificacao_media":"Diversificação média", "tipo":""},
+        title="Diversificação média por faixa — com e sem ativos complexos",
+        text_auto=".1%"
     )
-    piv_n = (
-        df_means.pivot_table(index="faixa_renda", columns="tipo", values="n", fill_value=0)
-               .reindex(order_bands)
+    fig_comp.update_layout(yaxis=dict(tickformat=".0%"), margin=dict(l=10, r=10, t=60, b=10))
+    st.plotly_chart(fig_comp, use_container_width=True)
+
+    # (B) Uplift em p.p. (com complexos – só simples)
+    piv = df_means.pivot_table(index="faixa_renda", columns="tipo", values="diversificacao_media").reindex(order_bands)
+    uplift = (piv.get("Com complexos") - piv.get("Só simples")) * 100
+    df_uplift = uplift.rename("uplift_pp").reset_index().sort_values("uplift_pp", ascending=False)
+
+    fig_u = px.bar(
+        df_uplift, x="faixa_renda", y="uplift_pp",
+        labels={"faixa_renda":"Faixa de renda", "uplift_pp":"Uplift de diversificação (p.p.)"},
+        title="Ganho observado ao incluir ativos complexos (por faixa de renda)",
+        text_auto=".1f"
     )
-
-    # ----- (A) DUMBBELL: comparação por faixa (horizontal) -----
-    import plotly.graph_objects as go
-
-    ys = list(piv.index)
-    x_simple  = [piv.loc[y, "Só simples"]     if "Só simples"    in piv.columns else None for y in ys]
-    x_complex = [piv.loc[y, "Com complexos"]  if "Com complexos" in piv.columns else None for y in ys]
-    n_simple  = [piv_n.loc[y, "Só simples"]   if "Só simples"    in piv_n.columns else 0 for y in ys]
-    n_complex = [piv_n.loc[y, "Com complexos"]if "Com complexos" in piv_n.columns else 0 for y in ys]
-
-    fig_db = go.Figure()
-    # linhas que conectam os dois pontos de cada faixa
-    for y, a, b in zip(ys, x_simple, x_complex):
-        if pd.notnull(a) and pd.notnull(b):
-            fig_db.add_trace(go.Scatter(
-                x=[a, b], y=[y, y], mode="lines", line=dict(width=2),
-                showlegend=False, hoverinfo="skip"
-            ))
-    # marcadores
-    fig_db.add_trace(go.Scatter(
-        x=x_simple, y=ys, mode="markers", name="Só simples", marker=dict(size=10),
-        hovertemplate="Faixa: %{y}<br>Só simples: %{x:.2%}<br>n=%{customdata}",
-        customdata=n_simple
-    ))
-    fig_db.add_trace(go.Scatter(
-        x=x_complex, y=ys, mode="markers", name="Com complexos", marker=dict(size=10),
-        hovertemplate="Faixa: %{y}<br>Com complexos: %{x:.2%}<br>n=%{customdata}",
-        customdata=n_complex
-    ))
-    fig_db.update_layout(
-        title="Comparação por faixa — quanto muda ao incluir ativos complexos",
-        xaxis=dict(tickformat=".0%"),
-        yaxis=dict(categoryorder="array", categoryarray=order_bands),
-        margin=dict(l=10, r=10, t=60, b=10),
-    )
-    st.plotly_chart(fig_db, use_container_width=True)
-
-    # ----- (B) UPLIFT: barras em p.p. por faixa (ordenado) -----
-    piv_u = piv.copy()
-    piv_u["uplift_pp"] = (piv_u.get("Com complexos") - piv_u.get("Só simples")) * 100
-    piv_u = piv_u.reset_index().sort_values("uplift_pp", ascending=False)
-
-    fig_uplift = px.bar(
-        piv_u, x="faixa_renda", y="uplift_pp",
-        labels={"faixa_renda": "Faixa de renda", "uplift_pp": "Uplift de diversificação (p.p.)"},
-        title="Uplift observado ao incluir ativos complexos (por faixa de renda)",
-        text_auto=".1f",
-    )
-    fig_uplift.update_layout(
-        xaxis={"categoryorder": "array", "categoryarray": list(piv_u["faixa_renda"])},
-        margin=dict(l=10, r=10, t=60, b=10),
-    )
-    st.plotly_chart(fig_uplift, use_container_width=True)
+    fig_u.update_layout(margin=dict(l=10, r=10, t=60, b=10))
+    st.plotly_chart(fig_u, use_container_width=True)
 
     with st.expander("Como ler / por que importa (complexidade)"):
         st.markdown(
-            "- **Dumbbell (gráfico de cima):** cada faixa tem **dois pontos** (Só simples vs. Com complexos); "
-            "o traço mostra o **ganho** de diversificação dentro da faixa.\n"
-            "- **Barras (gráfico de baixo):** mostram o **uplift em p.p.** por faixa — quanto maior a barra, "
-            "maior o ganho ao reduzir a barreira de complexidade.\n"
-            "- O hover exibe o **tamanho da amostra (n)** de cada grupo."
+            "- **Barras agrupadas:** comparação direta **lado a lado** (Com complexos vs. Só simples) em cada faixa.\n"
+            "- **Uplift (p.p.):** o **quanto sobe** a diversificação ao incluir complexos. "
+            "Geralmente maior nas faixas **baixas/médias de renda** → alvo natural para **onboarding**."
         )
 
     # ---------- 3.2 Efeito Isolamento da Riqueza: dispersão regional vs renda ----------
@@ -748,7 +683,7 @@ with tabNotas:
             df_disp, x="faixa_renda", y="disp_regional", markers=True,
             category_orders={"faixa_renda": order_bands},
             labels={"faixa_renda": "Faixa de renda", "disp_regional": "Dispersão regional (σ)"},
-            title="Dispersão da diversificação entre regiões por faixa de renda",
+            title="Dispersão da diversificação entre regiões por faixa de renda"
         )
         st.plotly_chart(fig_disp, use_container_width=True)
     else:
@@ -771,10 +706,13 @@ with tabNotas:
             "- Para detalhes (modelos, robustez e limitações), consulte a **Dissertação** na aba “📜 Dissertação e Materiais”."
         )
 
-    colA, colB = st.columns(2)
+    colA, colB, colC = st.columns(3)
     with colA:
         if st.button("Ir para 💡 Renda vs. Complexidade"):
-            _toast("Aba 💡 Renda vs. Complexidade aberta na parte superior.")
+            _switch_tab("💡 Renda vs. Complexidade")
     with colB:
-        if st.button("Ir para 📈 Análise Temporal / 🌍 Geográfica"):
-            _toast("Use as abas 📈 e 🌍 para comparar tendências e regiões.")
+        if st.button("Ir para 🌍 Geográfica"):
+            _switch_tab("🌍 Análise Geográfica")
+    with colC:
+        if st.button("Ir para 📈 Temporal"):
+            _switch_tab("📈 Análise Temporal")
